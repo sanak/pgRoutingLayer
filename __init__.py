@@ -1,13 +1,13 @@
 """
 /***************************************************************************
- pgRouting Layer
+ pgRouting Tester
                                  a QGIS plugin
                                  
- based on "Fast SQL Layer" plugin Copyright 2011 Pablo Torres Carreira 
+ based on "pgRoutingLayer" plugin Copyright 2011 Anita Graser 
                              -------------------
-        begin                : 2011-11-25
-        copyright            : (c) 2011 by Anita Graser
-        email                : anita.graser.at@gmail.com
+        begin                : 2012-08-15
+        copyright            : (c) 2012 by sanak
+        email                : geosanak@gmail.com
  ***************************************************************************/
 
 /***************************************************************************
@@ -22,15 +22,15 @@
 """
 
 def name():
-    return "pgRouting Layer"
+    return "pgRouting Tester"
 def description():
-    return "Dockable widget that adds pgRouting layers"
+    return "Dockable widget that test pgRouting functions"
 def version():
     return "Version 0.1"
 def icon():
-    return "icon.png"
+    return "icons/icon.png"
 def qgisMinimumVersion():
     return "1.7"
 def classFactory(iface):
-    from pgRoutingLayer import PgRoutingLayer
-    return PgRoutingLayer(iface)
+    from pgRoutingTester import PgRoutingTester
+    return PgRoutingTester(iface)

@@ -1,13 +1,13 @@
 ﻿"""
 /***************************************************************************
- pgRouting Layer
+ pgRouting Tester
                                  a QGIS plugin
                                  
- based on "Fast SQL Layer" plugin. Copyright 2011 Pablo Torres Carreira 
+ based on "pgRoutingLayer" plugin. Copyright 2011 Anita Graser 
                              -------------------
-        begin                : 2011-11-25
-        copyright            : (c) 2011 by Anita Graser
-        email                : anita.graser.at@gmail.com
+        begin                : 2012-08-15
+        copyright            : (c) 2012 by sanak
+        email                : geosanak@gmail.com
  ***************************************************************************/
 
 /***************************************************************************
@@ -33,7 +33,7 @@ import re
 
 conn = dbConnection.ConnectionManager()
 
-class PgRoutingLayer:
+class PgRoutingTester:
 
     SUPPORTED_FUNCTIONS = [
         'shortest_path',
@@ -63,14 +63,14 @@ class PgRoutingLayer:
         
     def initGui(self):
         # Create action that will start plugin configuration
-        self.action = QAction(QIcon(":/plugins/pgRoutingLayer/icon.png"), "pgRouting Layer", self.iface.mainWindow())
+        self.action = QAction(QIcon(":/plugins/pgRoutingTester/icons/icon.png"), "pgRouting Tester", self.iface.mainWindow())
         #Add toolbar button and menu item
-        self.iface.addPluginToDatabaseMenu("&pgRouting Layer", self.action)
+        self.iface.addPluginToDatabaseMenu("&pgRouting Tester", self.action)
         #self.iface.addToolBarIcon(self.action)
         
         #load the form
         path = os.path.dirname(os.path.abspath(__file__))
-        self.dock = uic.loadUi(os.path.join(path, "ui_pgRoutingLayer.ui"))
+        self.dock = uic.loadUi(os.path.join(path, "ui_pgRoutingTester.ui"))
         self.iface.addDockWidget(Qt.LeftDockWidgetArea, self.dock)
         
         self.idsEmitPoint = QgsMapToolEmitPoint(self.iface.mapCanvas())

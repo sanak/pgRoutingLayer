@@ -1,11 +1,11 @@
 [general]
-name=pgRouting Layer
-description=Dockable widget that adds pgRouting layers
+name=pgRouting Tester
+description=Dockable widget that test pgRouting functions
 version=Version 0.1
 qgisMinimumVersion=1.7.0
-authorName=Anita Graser
-icon=icon.png
+authorName=sanak
+icon=icons/icon.png
 experimental=True
-homepage=http://underdark.wordpress.com/
+homepage=http://github.com/sanak/pgRoutingTester
 tracker=None
 repository=None

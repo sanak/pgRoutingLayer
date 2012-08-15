@@ -1,19 +1,19 @@
-# Welcome to PgRouting Layer!
+# Welcome to PgRouting Tester!
 
-A plugin for QGIS by Anita Graser 
+A plugin for QGIS by sanak 
 
-* project home and bug tracker: https://github.com/anitagraser/pgRoutingLayer
+* project home and bug tracker: https://github.com/sanak/pgRoutingTester
 * plugin repository: none yet
-* Wiki: https://github.com/anitagraser/pgRoutingLayer/wiki
+* Wiki: https://github.com/sanak/pgRoutingTester/wiki
 
 
 ## What is the goal
 
-PgRouting Layer is a plugin for QGIS that serves as a GUI for pgRouting - a popular routing solution for PostGIS databases.
+PgRouting Tester is a plugin for QGIS that serves as a GUI for pgRouting - a popular routing solution for PostGIS databases.
 
 ## What this plugin currently does
 
-Currently, it supports pgRouting's Dijkstra shortest_path() function only.
+Currently, it supports pgRouting 1.x non wrapper functions only.
 
 ## License
 
@@ -24,7 +24,7 @@ the Free Software Foundation; either version 2 of the License, or
 
 ## Installation
 
-To install this plugin, download the zipped repository from https://github.com/anitagraser/pgRoutingLayer/zipball/master
+To install this plugin, download the zipped repository from https://github.com/sanak/pgRoutingTester/zipball/master
 
 Unpack the zip file into your ~/.qgis/python/plugins folder.
 
