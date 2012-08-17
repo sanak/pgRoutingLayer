@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>250</width>
-    <height>365</height>
+    <width>230</width>
+    <height>499</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -31,12 +31,6 @@
       </property>
       <item row="0" column="0">
        <widget class="QLabel" name="labelConnections">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
         <property name="locale">
          <locale language="English" country="UnitedStates"/>
         </property>
@@ -45,45 +39,24 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="2">
-       <widget class="QComboBox" name="comboConnections">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="minimumSize">
-         <size>
-          <width>0</width>
-          <height>0</height>
-         </size>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>16777215</width>
-          <height>20</height>
-         </size>
-        </property>
-        <property name="locale">
-         <locale language="English" country="UnitedStates"/>
-        </property>
-       </widget>
-      </item>
       <item row="1" column="0">
        <widget class="QLabel" name="labelFunction">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
+        <property name="locale">
+         <locale language="English" country="UnitedStates"/>
         </property>
         <property name="text">
          <string>Function</string>
         </property>
        </widget>
       </item>
-      <item row="1" column="2">
+      <item row="0" column="1">
+       <widget class="QComboBox" name="comboConnections">
+        <property name="locale">
+         <locale language="English" country="UnitedStates"/>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
        <widget class="QComboBox" name="comboBoxFunction">
         <property name="enabled">
          <bool>true</bool>
@@ -100,6 +73,9 @@
           <height>20</height>
          </size>
         </property>
+        <property name="locale">
+         <locale language="English" country="UnitedStates"/>
+        </property>
         <property name="currentIndex">
          <number>-1</number>
         </property>
@@ -109,12 +85,6 @@
     </item>
     <item>
      <widget class="QGroupBox" name="groupBoxSql">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
       <property name="locale">
        <locale language="English" country="UnitedStates"/>
       </property>
@@ -178,29 +148,26 @@
        <item>
         <widget class="QScrollArea" name="scrollAreaColumns">
          <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+          <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
-         <property name="minimumSize">
+         <property name="maximumSize">
           <size>
-           <width>0</width>
-           <height>60</height>
+           <width>16777215</width>
+           <height>124</height>
           </size>
          </property>
          <property name="widgetResizable">
           <bool>true</bool>
          </property>
-         <property name="alignment">
-          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
-         </property>
-         <widget class="QWidget" name="scrollAreaWidgetContents_2">
+         <widget class="QWidget" name="scrollAreaWidgetContents">
           <property name="geometry">
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>205</width>
+            <width>185</width>
             <height>264</height>
            </rect>
           </property>
@@ -217,7 +184,7 @@
            <item row="0" column="0">
             <layout class="QGridLayout" name="gridLayoutColumns">
              <property name="sizeConstraint">
-              <enum>QLayout::SetDefaultConstraint</enum>
+              <enum>QLayout::SetNoConstraint</enum>
              </property>
              <property name="spacing">
               <number>3</number>
@@ -400,7 +367,7 @@
         </property>
        </widget>
       </item>
-      <item row="2" column="0">
+      <item row="3" column="0">
        <widget class="QLabel" name="labelTargetId">
         <property name="locale">
          <locale language="English" country="UnitedStates"/>
@@ -410,7 +377,7 @@
         </property>
        </widget>
       </item>
-      <item row="2" column="1">
+      <item row="3" column="1">
        <widget class="QLineEdit" name="lineEditTargetId">
         <property name="toolTip">
          <string>id of the end node</string>
@@ -444,6 +411,9 @@
           <height>22</height>
          </size>
         </property>
+        <property name="locale">
+         <locale language="English" country="UnitedStates"/>
+        </property>
         <property name="text">
          <string/>
         </property>
@@ -456,7 +426,7 @@
         </property>
        </widget>
       </item>
-      <item row="2" column="2">
+      <item row="3" column="2">
        <widget class="QToolButton" name="buttonSelectTargetId">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
@@ -469,6 +439,9 @@
           <width>22</width>
           <height>22</height>
          </size>
+        </property>
+        <property name="locale">
+         <locale language="English" country="UnitedStates"/>
         </property>
         <property name="text">
          <string/>
@@ -484,13 +457,20 @@
       </item>
       <item row="0" column="0">
        <widget class="QLabel" name="labelIds">
+        <property name="locale">
+         <locale language="English" country="UnitedStates"/>
+        </property>
         <property name="text">
          <string>ids</string>
         </property>
        </widget>
       </item>
       <item row="0" column="1">
-       <widget class="QLineEdit" name="lineEditIds"/>
+       <widget class="QLineEdit" name="lineEditIds">
+        <property name="locale">
+         <locale language="English" country="UnitedStates"/>
+        </property>
+       </widget>
       </item>
       <item row="0" column="2">
        <widget class="QToolButton" name="buttonSelectIds">
@@ -505,6 +485,9 @@
           <width>22</width>
           <height>22</height>
          </size>
+        </property>
+        <property name="locale">
+         <locale language="English" country="UnitedStates"/>
         </property>
         <property name="text">
          <string/>
@@ -521,7 +504,7 @@
         </property>
        </widget>
       </item>
-      <item row="3" column="1">
+      <item row="5" column="1">
        <widget class="QLineEdit" name="lineEditDistance">
         <property name="maximumSize">
          <size>
@@ -529,9 +512,82 @@
           <height>16777215</height>
          </size>
         </property>
+        <property name="locale">
+         <locale language="English" country="UnitedStates"/>
+        </property>
        </widget>
       </item>
-      <item row="4" column="0" colspan="3">
+      <item row="5" column="0">
+       <widget class="QLabel" name="labelDistance">
+        <property name="locale">
+         <locale language="English" country="UnitedStates"/>
+        </property>
+        <property name="text">
+         <string>distance</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="labelSourcePos">
+        <property name="locale">
+         <locale language="English" country="UnitedStates"/>
+        </property>
+        <property name="text">
+         <string>source_pos</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="labelTargetPos">
+        <property name="locale">
+         <locale language="English" country="UnitedStates"/>
+        </property>
+        <property name="text">
+         <string>target_pos</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QLineEdit" name="lineEditSourcePos">
+        <property name="locale">
+         <locale language="English" country="UnitedStates"/>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="QLineEdit" name="lineEditTargetPos">
+        <property name="locale">
+         <locale language="English" country="UnitedStates"/>
+        </property>
+       </widget>
+      </item>
+      <item row="7" column="0">
+       <widget class="QLabel" name="labelTurnRestrictSql">
+        <property name="locale">
+         <locale language="English" country="UnitedStates"/>
+        </property>
+        <property name="text">
+         <string>turn
+_restrict
+_sql</string>
+        </property>
+       </widget>
+      </item>
+      <item row="7" column="1" colspan="2">
+       <widget class="QTextEdit" name="textEditTurnRestrictSql">
+        <property name="locale">
+         <locale language="English" country="UnitedStates"/>
+        </property>
+        <property name="html">
+         <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'MS UI Gothic'; font-size:9pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+       </widget>
+      </item>
+      <item row="6" column="0" colspan="3">
        <layout class="QHBoxLayout" name="horizontalLayoutOption2">
         <property name="spacing">
          <number>3</number>
@@ -550,6 +606,9 @@
           <property name="toolTip">
            <string>tick if the graph is directed</string>
           </property>
+          <property name="locale">
+           <locale language="English" country="UnitedStates"/>
+          </property>
           <property name="text">
            <string>directed</string>
           </property>
@@ -566,6 +625,9 @@
           <property name="toolTip">
            <string>if ticked, reverse cost will be used for the cost of the traversal of the edge in the opposite direction</string>
           </property>
+          <property name="locale">
+           <locale language="English" country="UnitedStates"/>
+          </property>
           <property name="text">
            <string>has_reverse_cost</string>
           </property>
@@ -573,14 +635,20 @@
         </item>
        </layout>
       </item>
-      <item row="3" column="0">
-       <widget class="QLabel" name="labelDistance">
-        <property name="text">
-         <string>distance</string>
-        </property>
-       </widget>
-      </item>
      </layout>
+    </item>
+    <item>
+     <spacer name="verticalSpacer">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>20</width>
+        <height>40</height>
+       </size>
+      </property>
+     </spacer>
     </item>
     <item>
      <layout class="QHBoxLayout" name="horizontalLayoutCommands">
@@ -635,6 +703,9 @@
           <height>16777215</height>
          </size>
         </property>
+        <property name="locale">
+         <locale language="English" country="UnitedStates"/>
+        </property>
         <property name="text">
          <string>Export</string>
         </property>
@@ -654,6 +725,9 @@
           <height>16777215</height>
          </size>
         </property>
+        <property name="locale">
+         <locale language="English" country="UnitedStates"/>
+        </property>
         <property name="text">
          <string>Clear</string>
         </property>
@@ -665,8 +739,6 @@
   </widget>
  </widget>
  <tabstops>
-  <tabstop>comboConnections</tabstop>
-  <tabstop>comboBoxFunction</tabstop>
   <tabstop>lineEditTable</tabstop>
   <tabstop>lineEditGeometry</tabstop>
   <tabstop>scrollAreaColumns</tabstop>

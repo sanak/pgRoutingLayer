@@ -15,14 +15,21 @@ class Function(FunctionBase):
     def getControlNames(self):
         # 'id' and 'target' are used for finding nearest node
         return [
-            'lineEditId', 'lineEditSource', 'lineEditTarget',
-            'lineEditX1', 'lineEditY1',
-            'lineEditIds', 'buttonSelectIds',
-            'lineEditSourceId', 'buttonSelectSourceId'
+            'labelId', 'lineEditId',
+            'labelSource', 'lineEditSource',
+            'labelTarget', 'lineEditTarget',
+            'labelX1', 'lineEditX1',
+            'labelY1', 'lineEditY1',
+            'labelIds', 'lineEditIds', 'buttonSelectIds',
+            'labelSourceId', 'lineEditSourceId', 'buttonSelectSourceId'
         ]
     
     @classmethod
     def isEdgeBase(self):
+        return False
+    
+    @classmethod
+    def canExport(self):
         return False
     
     @classmethod

@@ -14,15 +14,22 @@ class Function(FunctionBase):
     @classmethod
     def getControlNames(self):
         return [
-            'lineEditId', 'lineEditSource', 'lineEditTarget',
-            'lineEditCost', 'lineEditReverseCost',
-            'lineEditSourceId', 'buttonSelectSourceId',
-            'lineEditDistance',
+            'labelId', 'lineEditId',
+            'labelSource', 'lineEditSource',
+            'labelTarget', 'lineEditTarget',
+            'labelCost', 'lineEditCost',
+            'labelReverseCost', 'lineEditReverseCost',
+            'labelSourceId', 'lineEditSourceId', 'buttonSelectSourceId',
+            'labelDistance', 'lineEditDistance',
             'checkBoxDirected', 'checkBoxHasReverseCost'
         ]
     
     @classmethod
     def isEdgeBase(self):
+        return False
+    
+    @classmethod
+    def canExport(self):
         return False
     
     @classmethod

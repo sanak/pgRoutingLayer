@@ -14,17 +14,23 @@ class Function(FunctionBase):
     @classmethod
     def getControlNames(self):
         return [
-            'lineEditId', 'lineEditSource', 'lineEditTarget',
-            'lineEditCost', 'lineEditReverseCost',
-            'lineEditSourceId', 'buttonSelectSourceId',
-            'lineEditTargetId', 'buttonSelectTargetId',
-            'checkBoxDirected', 'checkBoxHasReverseCost',
-            'buttonExport'
+            'labelId', 'lineEditId',
+            'labelSource', 'lineEditSource',
+            'labelTarget', 'lineEditTarget',
+            'labelCost', 'lineEditCost',
+            'labelReverseCost', 'lineEditReverseCost',
+            'labelSourceId', 'lineEditSourceId', 'buttonSelectSourceId',
+            'labelTargetId', 'lineEditTargetId', 'buttonSelectTargetId',
+            'checkBoxDirected', 'checkBoxHasReverseCost'
         ]
     
     @classmethod
     def isEdgeBase(self):
         return False
+    
+    @classmethod
+    def canExport(self):
+        return True
     
     @classmethod
     def prepare(self, con, args, geomType, canvasItemList):

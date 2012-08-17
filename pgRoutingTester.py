@@ -44,16 +44,25 @@ class PgRoutingTester:
         'tsp'
     ]
     TOGGLE_CONTROL_NAMES = [
-        'lineEditId', 'lineEditSource', 'lineEditTarget',
-        'lineEditCost', 'lineEditReverseCost',
-        'lineEditX1', 'lineEditY1', 'lineEditX2', 'lineEditY2',
-        'lineEditRule', 'lineEditToCost',
-        'lineEditIds', 'buttonSelectIds',
-        'lineEditSourceId', 'buttonSelectSourceId',
-        'lineEditTargetId', 'buttonSelectTargetId',
-        'lineEditDistance',
+        'labelId', 'lineEditId',
+        'labelSource', 'lineEditSource',
+        'labelTarget', 'lineEditTarget',
+        'labelCost', 'lineEditCost',
+        'labelReverseCost', 'lineEditReverseCost',
+        'labelX1', 'lineEditX1',
+        'labelY1', 'lineEditY1',
+        'labelX2', 'lineEditX2',
+        'labelY2', 'lineEditY2',
+        'labelRule', 'lineEditRule',
+        'labelToCost', 'lineEditToCost',
+        'labelIds', 'lineEditIds', 'buttonSelectIds',
+        'labelSourceId', 'lineEditSourceId', 'buttonSelectSourceId',
+        'labelSourcePos', 'lineEditSourcePos',
+        'labelTargetId', 'lineEditTargetId', 'buttonSelectTargetId',
+        'labelTargetPos', 'lineEditTargetPos',
+        'labelDistance', 'lineEditDistance',
         'checkBoxDirected', 'checkBoxHasReverseCost',
-        'buttonExport'
+        'labelTurnRestrictSql', 'textEditTurnRestrictSql',
     ]
     FIND_RADIUS = 10
     
@@ -102,6 +111,7 @@ class PgRoutingTester:
         for i in self.actionsDb:
             self.dock.comboConnections.addItem(i)
         
+        self.prevType = None
         self.functions = {}
         for funcname in self.SUPPORTED_FUNCTIONS:
             # import the function
@@ -178,19 +188,29 @@ class PgRoutingTester:
         
         for controlName in self.TOGGLE_CONTROL_NAMES:
             control = getattr(self.dock, controlName)
-            control.setEnabled(False)
+            control.setVisible(False)
         
         for controlName in function.getControlNames():
             control = getattr(self.dock, controlName)
-            control.setEnabled(True)
+            control.setVisible(True)
+        
+        # adjust sql scroll area max height (TODO:initial display)
+        contents = self.dock.scrollAreaWidgetContents
+        margins = contents.layout().contentsMargins()
+        ##QMessageBox.information(self.dock, self.dock.windowTitle(), '%s - height:%d' % (text, contents.sizeHint().height()))
+        self.dock.scrollAreaColumns.setMaximumHeight(contents.sizeHint().height() + margins.top() + margins.bottom())
         
         if (not self.dock.checkBoxHasReverseCost.isChecked()) or (not self.dock.checkBoxHasReverseCost.isEnabled()):
             self.dock.lineEditReverseCost.setEnabled(False)
-        
-        # currently edge base function is "shortest_path_shooting_star" only
-        if function.isEdgeBase():
+                
+        # if type(edge/node) changed, clear input
+        if (self.prevType != None) and (self.prevType != function.isEdgeBase()):
             self.clear()
-            
+        
+        self.prevType = function.isEdgeBase()
+        
+        self.dock.buttonExport.setEnabled(function.canExport())
+   
     def selectIds(self, checked):
         if checked:
             self.toggleSelectButton(self.dock.buttonSelectIds)

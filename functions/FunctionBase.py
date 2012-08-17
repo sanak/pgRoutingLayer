@@ -14,6 +14,10 @@ class FunctionBase(object):
         return False
     
     @classmethod
+    def canExport(self):
+        return False
+    
+    @classmethod
     def prepare(self, con, args, geomType, canvasItemList):
         pass
     
