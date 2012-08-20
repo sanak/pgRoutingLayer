@@ -41,7 +41,8 @@ class PgRoutingTester:
         'shortest_path_shooting_star',
         'driving_distance',
         'alphashape',
-        'tsp'
+        'tsp',
+        'turn_restrict_shortest_path_vertex'
     ]
     TOGGLE_CONTROL_NAMES = [
         'labelId', 'lineEditId',
@@ -62,7 +63,7 @@ class PgRoutingTester:
         'labelTargetPos', 'lineEditTargetPos',
         'labelDistance', 'lineEditDistance',
         'checkBoxDirected', 'checkBoxHasReverseCost',
-        'labelTurnRestrictSql', 'textEditTurnRestrictSql',
+        'labelTurnRestrictSql', 'plainTextEditTurnRestrictSql',
     ]
     FIND_RADIUS = 10
     
@@ -523,6 +524,9 @@ class PgRoutingTester:
                 args['reverse_cost'] = ' '
             else:
                 args['reverse_cost'] = ', ' + args['reverse_cost'] + '::float8 AS reverse_cost'
+        
+        if 'plainTextEditTurnRestrictSql' in controls:
+            args['turn_restrict_sql'] = self.dock.plainTextEditTurnRestrictSql.toPlainText();
         
         return args
         
