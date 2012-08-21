@@ -42,7 +42,8 @@ class PgRoutingTester:
         'driving_distance',
         'alphashape',
         'tsp',
-        'turn_restrict_shortest_path_vertex'
+        'turn_restrict_shortest_path_vertex',
+        'turn_restrict_shortest_path_edge'
     ]
     TOGGLE_CONTROL_NAMES = [
         'labelId', 'lineEditId',
@@ -114,35 +115,21 @@ class PgRoutingTester:
         
         self.prevType = None
         self.functions = {}
-        for funcname in self.SUPPORTED_FUNCTIONS:
+        for funcfname in self.SUPPORTED_FUNCTIONS:
             # import the function
-            exec("from functions import %s as function" % funcname)
+            exec("from functions import %s as function" % funcfname)
+            funcname = function.Function.getName()
             self.functions[funcname] = function.Function(self.dock)
             self.dock.comboBoxFunction.addItem(funcname)
         
-        #self.dock.lineEditTable.setText('at_2po_4pgr')
-        #self.dock.lineEditGeometry.setText('geom_way')
-        self.dock.lineEditTable.setText('roads')
-        self.dock.lineEditGeometry.setText('the_geom')
-        
-        self.dock.lineEditId.setText('id')
-        self.dock.lineEditSource.setText('source')
-        self.dock.lineEditTarget.setText('target')
-        self.dock.lineEditCost.setText('cost')
-        self.dock.lineEditReverseCost.setText('reverse_cost')
-        self.dock.lineEditX1.setText('x1')
-        self.dock.lineEditY1.setText('y1')
-        self.dock.lineEditX2.setText('x2')
-        self.dock.lineEditY2.setText('y2')
-        self.dock.lineEditRule.setText('rule')
-        self.dock.lineEditToCost.setText('to_cost')
-        
-        #self.dock.lineEditSourceId.setText('191266')
-        #self.dock.lineEditTargetId.setText('190866')
+        self.loadSettings()
         
         self.dock.lineEditIds.setValidator(QRegExpValidator(QRegExp("[0-9,]+"), self.dock))
         self.dock.lineEditSourceId.setValidator(QIntValidator())
+        self.dock.lineEditSourcePos.setValidator(QDoubleValidator(0.0, 1.0, 10, self.dock))
         self.dock.lineEditTargetId.setValidator(QIntValidator())
+        self.dock.lineEditTargetPos.setValidator(QDoubleValidator(0.0, 1.0, 10, self.dock))
+        self.dock.lineEditDistance.setValidator(QDoubleValidator())
         
         self.idsVertexMarkers = []
         self.sourceIdVertexMarker = QgsVertexMarker(self.iface.mapCanvas())
@@ -178,6 +165,7 @@ class PgRoutingTester:
         self.iface.addDockWidget(Qt.LeftDockWidgetArea, self.dock)
         
     def unload(self):
+        self.saveSettings()
         # Remove the plugin menu item and icon
         self.iface.removePluginDatabaseMenu("&pgRouting Layer", self.action)
         self.iface.removeDockWidget(self.dock)
@@ -341,7 +329,7 @@ class PgRoutingTester:
             db = self.actionsDb[dados].connect()
             
             con = db.con
-            
+
             srid, geomType = self.getSridAndGeomType(con, args)
             function.prepare(con, args, geomType, self.canvasItemList)
             
@@ -506,8 +494,14 @@ class PgRoutingTester:
         if 'lineEditSourceId' in controls:
             args['source_id'] = self.dock.lineEditSourceId.text()
         
+        if 'lineEditSourcePos' in controls:
+            args['source_pos'] = self.dock.lineEditSourcePos.text()
+        
         if 'lineEditTargetId' in controls:
             args['target_id'] = self.dock.lineEditTargetId.text()
+        
+        if 'lineEditTargetPos' in controls:
+            args['target_pos'] = self.dock.lineEditTargetPos.text()
         
         if 'lineEditIds' in controls:
             args['ids'] = self.dock.lineEditIds.text()
@@ -726,3 +720,64 @@ class PgRoutingTester:
         finally:
             if db and db.con:
                 db.con.close()
+    
+    def loadSettings(self):
+        settings = QSettings()
+        idx = self.dock.comboConnections.findText(settings.value('/pgRoutingTester/Database', QVariant('')).toString())
+        if idx >= 0:
+            self.dock.comboConnections.setCurrentIndex(idx)
+        idx = self.dock.comboBoxFunction.findText(settings.value('/pgRoutingTester/Function', QVariant('shortest_path')).toString())
+        if idx >= 0:
+            self.dock.comboBoxFunction.setCurrentIndex(idx)
+        
+        self.dock.lineEditTable.setText(settings.value('/pgRoutingTester/sql/edge_table', QVariant('roads')).toString())
+        self.dock.lineEditGeometry.setText(settings.value('/pgRoutingTester/sql/geometry', QVariant('the_geom')).toString())
+        self.dock.lineEditId.setText(settings.value('/pgRoutingTester/sql/id', QVariant('id')).toString())
+        self.dock.lineEditSource.setText(settings.value('/pgRoutingTester/sql/source', QVariant('source')).toString())
+        self.dock.lineEditTarget.setText(settings.value('/pgRoutingTester/sql/target', QVariant('target')).toString())
+        self.dock.lineEditCost.setText(settings.value('/pgRoutingTester/sql/cost', QVariant('cost')).toString())
+        self.dock.lineEditReverseCost.setText(settings.value('/pgRoutingTester/sql/reverse_cost', QVariant('reverse_cost')).toString())
+        self.dock.lineEditX1.setText(settings.value('/pgRoutingTester/sql/x1', QVariant('x1')).toString())
+        self.dock.lineEditY1.setText(settings.value('/pgRoutingTester/sql/y1', QVariant('y1')).toString())
+        self.dock.lineEditX2.setText(settings.value('/pgRoutingTester/sql/x2', QVariant('x2')).toString())
+        self.dock.lineEditY2.setText(settings.value('/pgRoutingTester/sql/y2', QVariant('y2')).toString())
+        self.dock.lineEditRule.setText(settings.value('/pgRoutingTester/sql/rule', QVariant('rule')).toString())
+        self.dock.lineEditToCost.setText(settings.value('/pgRoutingTester/sql/to_cost', QVariant('to_cost')).toString())
+        self.dock.lineEditIds.setText(settings.value('/pgRoutingTester/ids', QVariant('')).toString())
+        self.dock.lineEditSourceId.setText(settings.value('/pgRoutingTester/source_id', QVariant('')).toString())
+        self.dock.lineEditSourcePos.setText(settings.value('/pgRoutingTester/source_pos', QVariant('0.5')).toString())
+        self.dock.lineEditTargetId.setText(settings.value('/pgRoutingTester/target_id', QVariant('')).toString())
+        self.dock.lineEditTargetPos.setText(settings.value('/pgRoutingTester/target_pos', QVariant('0.5')).toString())
+        self.dock.lineEditDistance.setText(settings.value('/pgRoutingTester/distance', QVariant('')).toString())
+        self.dock.checkBoxDirected.setChecked(settings.value('/pgRoutingTester/directed', QVariant(False)).toBool())
+        self.dock.checkBoxHasReverseCost.setChecked(settings.value('/pgRoutingTester/has_reverse_cost', QVariant(False)).toBool())
+        self.dock.plainTextEditTurnRestrictSql.setPlainText(settings.value('/pgRoutingTester/turn_restrict_sql', QVariant('null')).toString())
+        
+    def saveSettings(self):
+        settings = QSettings()
+        settings.setValue('/pgRoutingTester/Database', QVariant(self.dock.comboConnections.currentText()))
+        settings.setValue('/pgRoutingTester/Function', QVariant(self.dock.comboBoxFunction.currentText()))
+        
+        settings.setValue('/pgRoutingTester/sql/edge_table', QVariant(self.dock.lineEditTable.text()))
+        settings.setValue('/pgRoutingTester/sql/geometry', QVariant(self.dock.lineEditGeometry.text()))
+        settings.setValue('/pgRoutingTester/sql/id', QVariant(self.dock.lineEditId.text()))
+        settings.setValue('/pgRoutingTester/sql/source', QVariant(self.dock.lineEditSource.text()))
+        settings.setValue('/pgRoutingTester/sql/target', QVariant(self.dock.lineEditTarget.text()))
+        settings.setValue('/pgRoutingTester/sql/cost', QVariant(self.dock.lineEditCost.text()))
+        settings.setValue('/pgRoutingTester/sql/reverse_cost', QVariant(self.dock.lineEditReverseCost.text()))
+        settings.setValue('/pgRoutingTester/sql/x1', QVariant(self.dock.lineEditX1.text()))
+        settings.setValue('/pgRoutingTester/sql/y1', QVariant(self.dock.lineEditY1.text()))
+        settings.setValue('/pgRoutingTester/sql/x2', QVariant(self.dock.lineEditX2.text()))
+        settings.setValue('/pgRoutingTester/sql/y2', QVariant(self.dock.lineEditY2.text()))
+        settings.setValue('/pgRoutingTester/sql/rule', QVariant(self.dock.lineEditRule.text()))
+        settings.setValue('/pgRoutingTester/sql/to_cost', QVariant(self.dock.lineEditToCost.text()))
+        
+        settings.setValue('/pgRoutingTester/ids', QVariant(self.dock.lineEditIds.text()))
+        settings.setValue('/pgRoutingTester/source_id', QVariant(self.dock.lineEditSourceId.text()))
+        settings.setValue('/pgRoutingTester/source_pos', QVariant(self.dock.lineEditSourcePos.text()))
+        settings.setValue('/pgRoutingTester/target_id', QVariant(self.dock.lineEditTargetId.text()))
+        settings.setValue('/pgRoutingTester/target_pos', QVariant(self.dock.lineEditTargetPos.text()))
+        settings.setValue('/pgRoutingTester/distance', QVariant(self.dock.lineEditDistance.text()))
+        settings.setValue('/pgRoutingTester/directed', QVariant(self.dock.checkBoxDirected.isChecked()))
+        settings.setValue('/pgRoutingTester/has_reverse_cost', QVariant(self.dock.checkBoxHasReverseCost.isChecked()))
+        settings.setValue('/pgRoutingTester/turn_restrict_sql', QVariant(self.dock.plainTextEditTurnRestrictSql.toPlainText()))

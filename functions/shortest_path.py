@@ -32,12 +32,10 @@ class Function(FunctionBase):
     def canExport(self):
         return True
     
-    @classmethod
     def prepare(self, con, args, geomType, canvasItemList):
         resultPathRubberBand = canvasItemList['path']
         resultPathRubberBand.reset(False)
     
-    @classmethod
     def getQuery(self, args):
         return """
             SELECT * FROM shortest_path('
@@ -48,7 +46,6 @@ class Function(FunctionBase):
                     FROM %(edge_table)s',
                 %(source_id)s, %(target_id)s, %(directed)s, %(has_reverse_cost)s)""" % args
     
-    @classmethod
     def draw(self, rows, con, args, geomType, canvasItemList, mapCanvas):
         resultPathRubberBand = canvasItemList['path']
         for row in rows:

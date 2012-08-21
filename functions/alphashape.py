@@ -9,7 +9,7 @@ class Function(FunctionBase):
     
     @classmethod
     def getName(self):
-        return 'shortest_path'
+        return 'alphashape'
     
     @classmethod
     def getControlNames(self):
@@ -32,7 +32,6 @@ class Function(FunctionBase):
     def canExport(self):
         return False
     
-    @classmethod
     def prepare(self, con, args, geomType, canvasItemList):
         resultAreaRubberBand = canvasItemList['area']
         resultAreaRubberBand.reset(True)
@@ -61,7 +60,6 @@ class Function(FunctionBase):
         cur = con.cursor()
         cur.execute(query % args)
     
-    @classmethod
     def getQuery(self, args):
         return """
             SELECT * FROM alphashape('
@@ -77,7 +75,6 @@ class Function(FunctionBase):
                         %(source_id)s, %(distance)s, %(directed)s, %(has_reverse_cost)s))
                     AS dd ON node.id = dd.vertex_id'::text)""" % args
     
-    @classmethod
     def draw(self, rows, con, args, geomType, canvasItemList, mapCanvas):
         resultAreaRubberBand = canvasItemList['area']
         # return columns are 'x', 'y'

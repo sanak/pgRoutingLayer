@@ -9,7 +9,7 @@ class Function(FunctionBase):
     
     @classmethod
     def getName(self):
-        return 'turn_restrict_shortest_path_vertex'
+        return 'turn_restrict_shortest_path(vertex)'
     
     @classmethod
     def getControlNames(self):
@@ -33,12 +33,10 @@ class Function(FunctionBase):
     def canExport(self):
         return True
     
-    @classmethod
     def prepare(self, con, args, geomType, canvasItemList):
         resultPathRubberBand = canvasItemList['path']
         resultPathRubberBand.reset(False)
     
-    @classmethod
     def getQuery(self, args):
         return """
             SELECT * FROM turn_restrict_shortest_path('
@@ -49,7 +47,6 @@ class Function(FunctionBase):
                     FROM %(edge_table)s',
                 %(source_id)s, %(target_id)s, %(directed)s, %(has_reverse_cost)s, %(turn_restrict_sql)s)""" % args
     
-    @classmethod
     def draw(self, rows, con, args, geomType, canvasItemList, mapCanvas):
         resultPathRubberBand = canvasItemList['path']
         for row in rows:

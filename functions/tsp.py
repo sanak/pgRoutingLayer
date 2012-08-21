@@ -32,14 +32,12 @@ class Function(FunctionBase):
     def canExport(self):
         return False
     
-    @classmethod
     def prepare(self, con, args, geomType, canvasItemList):
         resultNodesTextAnnotations = canvasItemList['annotations']
         for anno in resultNodesTextAnnotations:
             anno.setVisible(False)
         canvasItemList['annotations'] = []
     
-    @classmethod
     def getQuery(self, args):
         return """
             SELECT * FROM tsp('
@@ -50,7 +48,6 @@ class Function(FunctionBase):
                     WHERE %(source)s IN (%(ids)s)',
                 '%(ids)s', %(source_id)s)""" % args
     
-    @classmethod
     def draw(self, rows, con, args, geomType, canvasItemList, mapCanvas):
         resultNodesTextAnnotations = canvasItemList['annotations']
         if geomType == 'ST_MultiLineString':

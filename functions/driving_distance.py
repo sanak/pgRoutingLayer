@@ -32,14 +32,12 @@ class Function(FunctionBase):
     def canExport(self):
         return False
     
-    @classmethod
     def prepare(self, con, args, geomType, canvasItemList):
         resultNodesVertexMarkers = canvasItemList['markers']
         for marker in resultNodesVertexMarkers:
             marker.setVisible(False)
         canvasItemList['markers'] = []
     
-    @classmethod
     def getQuery(self, args):
         return """
             SELECT * FROM driving_distance('
@@ -50,7 +48,6 @@ class Function(FunctionBase):
                     FROM %(edge_table)s',
                 %(source_id)s, %(distance)s, %(directed)s, %(has_reverse_cost)s)""" % args
     
-    @classmethod
     def draw(self, rows, con, args, geomType, canvasItemList, mapCanvas):
         resultNodesVertexMarkers = canvasItemList['markers']
         if geomType == 'ST_MultiLineString':

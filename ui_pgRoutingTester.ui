@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>230</width>
-    <height>498</height>
+    <height>478</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -156,7 +156,7 @@
          <property name="maximumSize">
           <size>
            <width>16777215</width>
-           <height>124</height>
+           <height>16777215</height>
           </size>
          </property>
          <property name="widgetResizable">
@@ -183,9 +183,6 @@
            </property>
            <item row="0" column="0">
             <layout class="QGridLayout" name="gridLayoutColumns">
-             <property name="sizeConstraint">
-              <enum>QLayout::SetNoConstraint</enum>
-             </property>
              <property name="spacing">
               <number>3</number>
              </property>
@@ -632,7 +629,7 @@ _sql</string>
         <property name="maximumSize">
          <size>
           <width>16777215</width>
-          <height>70</height>
+          <height>50</height>
          </size>
         </property>
         <property name="tabStopWidth">
@@ -744,6 +741,8 @@ _sql</string>
   </widget>
  </widget>
  <tabstops>
+  <tabstop>comboConnections</tabstop>
+  <tabstop>comboBoxFunction</tabstop>
   <tabstop>lineEditTable</tabstop>
   <tabstop>lineEditGeometry</tabstop>
   <tabstop>scrollAreaColumns</tabstop>
@@ -762,9 +761,14 @@ _sql</string>
   <tabstop>buttonSelectIds</tabstop>
   <tabstop>lineEditSourceId</tabstop>
   <tabstop>buttonSelectSourceId</tabstop>
+  <tabstop>lineEditSourcePos</tabstop>
   <tabstop>lineEditTargetId</tabstop>
   <tabstop>buttonSelectTargetId</tabstop>
+  <tabstop>lineEditTargetPos</tabstop>
+  <tabstop>lineEditDistance</tabstop>
+  <tabstop>checkBoxDirected</tabstop>
   <tabstop>checkBoxHasReverseCost</tabstop>
+  <tabstop>plainTextEditTurnRestrictSql</tabstop>
   <tabstop>buttonRun</tabstop>
   <tabstop>buttonExport</tabstop>
   <tabstop>buttonClear</tabstop>
