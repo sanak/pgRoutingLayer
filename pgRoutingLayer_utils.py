@@ -43,11 +43,14 @@ def getBoolValue(settings, key, value):
 def isQGISv1():
     return QGis.QGIS_VERSION_INT < 10900
 
-def getDestinationCrs(mapRenderer):
+def getDestinationCrs(mapCanvas):
     if isQGISv1():
-        return mapRenderer.destinationSrs()
+        return mapCanvas.mapRenderer().destinationSrs()
     else:
-        return mapRenderer.destinationCrs()
+        if QGis.QGIS_VERSION_INT < 20400:
+            return mapCanvas.mapRenderer().destinationCrs()
+        else:
+            return mapCanvas.mapSettings().destinationCrs()
 
 def getCanvasSrid(crs):
     if isQGISv1():

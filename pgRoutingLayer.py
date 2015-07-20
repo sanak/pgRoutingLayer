@@ -387,7 +387,7 @@ class PgRoutingLayer:
             rows = cur.fetchall()
             
             args['srid'] = srid
-            args['canvas_srid'] = Utils.getCanvasSrid(Utils.getDestinationCrs(self.iface.mapCanvas().mapRenderer()))
+            args['canvas_srid'] = Utils.getCanvasSrid(Utils.getDestinationCrs(self.iface.mapCanvas()))
             Utils.setTransformQuotes(args)
             function.draw(rows, con, args, geomType, self.canvasItemList, self.iface.mapCanvas())
             
@@ -701,7 +701,7 @@ class PgRoutingLayer:
     def findNearestNode(self, args, pt):
         distance = self.iface.mapCanvas().getCoordinateTransform().mapUnitsPerPixel() * self.FIND_RADIUS
         rect = QgsRectangle(pt.x() - distance, pt.y() - distance, pt.x() + distance, pt.y() + distance)
-        canvasCrs = Utils.getDestinationCrs(self.iface.mapCanvas().mapRenderer())
+        canvasCrs = Utils.getDestinationCrs(self.iface.mapCanvas())
         db = None
         try:
             dados = str(self.dock.comboConnections.currentText())
@@ -820,7 +820,7 @@ class PgRoutingLayer:
     def findNearestLink(self, args, pt):
         distance = self.iface.mapCanvas().getCoordinateTransform().mapUnitsPerPixel() * self.FIND_RADIUS
         rect = QgsRectangle(pt.x() - distance, pt.y() - distance, pt.x() + distance, pt.y() + distance)
-        canvasCrs = Utils.getDestinationCrs(self.iface.mapCanvas().mapRenderer())
+        canvasCrs = Utils.getDestinationCrs(self.iface.mapCanvas())
         try:
             dados = str(self.dock.comboConnections.currentText())
             db = self.actionsDb[dados].connect()

@@ -76,7 +76,7 @@ class Function(FunctionBase):
         resultAreaRubberBand = canvasItemList['area']
         trans = None
         if mapCanvas.hasCrsTransformEnabled():
-            canvasCrs = Utils.getDestinationCrs(mapCanvas.mapRenderer())
+            canvasCrs = Utils.getDestinationCrs(mapCanvas)
             layerCrs = QgsCoordinateReferenceSystem()
             Utils.createFromSrid(layerCrs, args['srid'])
             trans = QgsCoordinateTransform(layerCrs, canvasCrs)
