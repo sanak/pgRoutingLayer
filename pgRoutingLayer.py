@@ -501,8 +501,8 @@ class PgRoutingLayer:
         
         args['path_query'] = function.getQuery(args)
         
-        query = """SELECT 1 AS id, ST_LINEMERGE(geom) as geom, ST_LENGTH(ST_LINEMERGE(geom)) as route_length FROM (
-            SELECT ST_UNION(geom) AS geom FROM (
+        query = """SELECT 1 AS id, ST_LineMerge(%(geometry)s) AS %(geometry)s, ST_Length(ST_LineMerge(%(geometry)s)) AS route_length, result_cost FROM (
+            SELECT ST_Union(%(geometry)s) AS %(geometry)s, SUM(result_cost) AS result_cost FROM (
             SELECT %(edge_table)s.*,
                 result.seq AS result_seq,
                 result.node AS result_node,
@@ -510,7 +510,7 @@ class PgRoutingLayer:
                 FROM %(edge_table)s
                 JOIN
                 (%(path_query)s) AS result
-                ON %(edge_table)s.%(id)s = result.edge ORDER BY result.seq ) as foo ) as bar""" % args
+                ON %(edge_table)s.%(id)s = result.edge ORDER BY result.seq ) AS foo ) AS bar""" % args
         
         query = query.replace('\n', ' ')
         query = re.sub(r'\s+', ' ', query)
