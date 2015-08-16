@@ -203,7 +203,7 @@ class PgRoutingLayer:
         # adjust sql scroll area max height (TODO:initial display)
         contents = self.dock.scrollAreaWidgetContents
         margins = contents.layout().contentsMargins()
-        ##QMessageBox.information(self.dock, self.dock.windowTitle(), '%s - height:%d' % (text, contents.sizeHint().height()))
+        ##Utils.logMessage('%s - height:%d' % (text, contents.sizeHint().height())
         self.dock.scrollAreaColumns.setMaximumHeight(contents.sizeHint().height() + margins.top() + margins.bottom())
         
         if (not self.dock.checkBoxHasReverseCost.isChecked()) or (not self.dock.checkBoxHasReverseCost.isEnabled()):
@@ -380,7 +380,7 @@ class PgRoutingLayer:
             function.prepare(con, args, geomType, self.canvasItemList)
             
             query = function.getQuery(args)
-            ##QMessageBox.information(self.dock, self.dock.windowTitle(), query)
+            Utils.logMessage('Run:' + query)
             
             cur = con.cursor()
             cur.execute(query)
@@ -446,7 +446,7 @@ class PgRoutingLayer:
         query = query.replace('( ', '(')
         query = query.replace(' )', ')')
         query = query.strip()
-        ##QMessageBox.information(self.dock, self.dock.windowTitle(), query)
+        Utils.logMessage('Export:\n' + query)
         
         try:
             dados = str(self.dock.comboConnections.currentText())
@@ -517,7 +517,7 @@ class PgRoutingLayer:
         query = query.replace('( ', '(')
         query = query.replace(' )', ')')
         query = query.strip()
-        ##QMessageBox.information(self.dock, self.dock.windowTitle(), query)
+        Utils.logMessage('Export merged:\n' + query)
         
         try:
             dados = str(self.dock.comboConnections.currentText())
@@ -741,7 +741,7 @@ class PgRoutingLayer:
                 WHERE ST_SetSRID('BOX3D(%(minx)f %(miny)f, %(maxx)f %(maxy)f)'::BOX3D, %(srid)d)
                     && %(geometry)s ORDER BY dist ASC LIMIT 1""" % args
             
-            ##QMessageBox.information(self.dock, self.dock.windowTitle(), query1)
+            ##Utils.logMessage(query1)
             cur1 = con.cursor()
             cur1.execute(query1)
             row1 = cur1.fetchone()
@@ -765,7 +765,7 @@ class PgRoutingLayer:
                 WHERE ST_SetSRID('BOX3D(%(minx)f %(miny)f, %(maxx)f %(maxy)f)'::BOX3D, %(srid)d)
                     && %(geometry)s ORDER BY dist ASC LIMIT 1""" % args
             
-            ##QMessageBox.information(self.dock, self.dock.windowTitle(), query2)
+            ##Utils.logMessage(query2)
             cur2 = con.cursor()
             cur2.execute(query2)
             row2 = cur2.fetchone()
@@ -799,7 +799,7 @@ class PgRoutingLayer:
                     d = d2
                     wkt = wkt2
             
-            ##QMessageBox.information(self.dock, self.dock.windowTitle(), str(d))
+            ##Utils.logMessage(str(d))
             if (d == None) or (d > distance):
                 node = None
                 wkt = None
@@ -858,7 +858,7 @@ class PgRoutingLayer:
                 WHERE ST_SetSRID('BOX3D(%(minx)f %(miny)f, %(maxx)f %(maxy)f)'::BOX3D, %(srid)d)
                     && %(geometry)s ORDER BY dist ASC LIMIT 1""" % args
             
-            ##QMessageBox.information(self.dock, self.dock.windowTitle(), query)
+            ##Utils.logMessage(query)
             cur = con.cursor()
             cur.execute(query)
             row = cur.fetchone()

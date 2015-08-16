@@ -63,10 +63,10 @@ class Function(FunctionBase):
                     SELECT ST_AsText(%(transform_s)sST_Reverse(%(geometry)s)%(transform_e)s) FROM %(edge_table)s
                         WHERE %(target)s = %(result_node_id)d AND %(id)s = %(result_edge_id)d;
                 """ % args
-                ##QMessageBox.information(self.ui, self.ui.windowTitle(), query2)
+                ##Utils.logMessage(query2)
                 cur2.execute(query2)
                 row2 = cur2.fetchone()
-                ##QMessageBox.information(self.ui, self.ui.windowTitle(), str(row2[0]))
+                ##Utils.logMessage(str(row2[0]))
                 assert row2, "Invalid result geometry. (node_id:%(result_node_id)d, edge_id:%(result_edge_id)d)" % args
                 
                 geom = QgsGeometry().fromWkt(str(row2[0]))

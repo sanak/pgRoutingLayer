@@ -3,6 +3,7 @@ from PyQt4.QtGui import *
 from qgis.core import *
 from qgis.gui import *
 import psycopg2
+from .. import pgRoutingLayer_utils as Utils
 from FunctionBase import FunctionBase
 
 class Function(FunctionBase):
@@ -72,10 +73,10 @@ class Function(FunctionBase):
                 SELECT ST_AsText(%(transform_s)sST_Reverse(%(geometry)s)%(transform_e)s) FROM %(edge_table)s
                     WHERE %(target)s = %(result_vertex_id)d AND %(id)s = %(result_edge_id)d;
             """ % args
-            ##QMessageBox.information(self.ui, self.ui.windowTitle(), query2)
+            ##Utils.logMessage(query2)
             cur2.execute(query2)
             row2 = cur2.fetchone()
-            ##QMessageBox.information(self.ui, self.ui.windowTitle(), str(row2[0]))
+            ##Utils.logMessage(str(row2[0]))
             # TODO: shooting_star always returns invalid vertex_id!
             assert row2, "Invalid result geometry. (vertex_id:%(result_vertex_id)d, edge_id:%(result_edge_id)d)" % args
             

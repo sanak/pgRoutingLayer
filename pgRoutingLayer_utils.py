@@ -72,3 +72,6 @@ def getRubberBandType(isPolygon):
             return QGis.Polygon
         else:
             return QGis.Line
+
+def logMessage(message, level=QgsMessageLog.INFO):
+    QgsMessageLog.logMessage(message, 'pgRouting Layer', level)
