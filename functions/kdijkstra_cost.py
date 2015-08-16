@@ -34,7 +34,7 @@ class Function(FunctionBase):
     def canExport(self):
         return False
     
-    def prepare(self, con, args, geomType, canvasItemList):
+    def prepare(self, canvasItemList):
         resultNodesTextAnnotations = canvasItemList['annotations']
         for anno in resultNodesTextAnnotations:
             anno.setVisible(False)

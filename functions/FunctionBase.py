@@ -17,7 +17,7 @@ class FunctionBase(object):
     def canExport(self):
         return False
     
-    def prepare(self, con, args, geomType, canvasItemList):
+    def prepare(self, canvasItemList):
         pass
     
     def getQuery(self, args):

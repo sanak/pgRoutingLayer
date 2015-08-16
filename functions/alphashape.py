@@ -31,35 +31,16 @@ class Function(FunctionBase):
     
     @classmethod
     def canExport(self):
-        return False
+        return True
     
-    def prepare(self, con, args, geomType, canvasItemList):
+    def prepare(self, canvasItemList):
         resultAreaRubberBand = canvasItemList['area']
         resultAreaRubberBand.reset(Utils.getRubberBandType(True))
-        query = """
-        CREATE TEMPORARY TABLE node AS
-            SELECT id,
-                ST_X(%(geometry)s) AS x,
-                ST_Y(%(geometry)s) AS y,
-                %(geometry)s
-                FROM (
-                    SELECT %(source)s AS id,
-                        %(startpoint)s AS %(geometry)s
-                        FROM %(edge_table)s
-                    UNION
-                    SELECT %(target)s AS id,
-                        %(endpoint)s AS %(geometry)s
-                        FROM %(edge_table)s
-                ) AS node;"""
-        Utils.setStartPoint(geomType, args)
-        Utils.setEndPoint(geomType, args)
-        
-        cur = con.cursor()
-        cur.execute(query % args)
-    
+
     def getQuery(self, args):
         return """
             SELECT x, y FROM pgr_alphashape('
+                %(node_query)s
                 SELECT *
                     FROM node
                     JOIN

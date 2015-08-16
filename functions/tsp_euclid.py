@@ -19,10 +19,6 @@ class Function(FunctionBase):
             'labelId', 'lineEditId',
             'labelSource', 'lineEditSource',
             'labelTarget', 'lineEditTarget',
-            'labelX1', 'lineEditX1',
-            'labelY1', 'lineEditY1',
-            'labelX2', 'lineEditX2',
-            'labelY2', 'lineEditY2',
             'labelIds', 'lineEditIds', 'buttonSelectIds',
             'labelSourceId', 'lineEditSourceId', 'buttonSelectSourceId',
             'labelTargetId', 'lineEditTargetId', 'buttonSelectTargetId'
@@ -36,7 +32,7 @@ class Function(FunctionBase):
     def canExport(self):
         return False
     
-    def prepare(self, con, args, geomType, canvasItemList):
+    def prepare(self, canvasItemList):
         resultNodesTextAnnotations = canvasItemList['annotations']
         for anno in resultNodesTextAnnotations:
             anno.setVisible(False)
@@ -45,11 +41,9 @@ class Function(FunctionBase):
     def getQuery(self, args):
         return """
             SELECT seq, id1 AS internal, id2 AS node, cost FROM pgr_tsp('
-                SELECT DISTINCT id, x, y FROM
-                    (SELECT DISTINCT %(source)s AS id, %(x1)s::float8 AS x, %(y1)s::float8 AS y FROM %(edge_table)s
-                    UNION
-                    SELECT DISTINCT %(target)s AS id, %(x2)s::float8 AS x, %(y2)s::float8 AS y FROM %(edge_table)s)
-                    AS node WHERE node.id IN (%(ids)s)',
+                %(node_query)s
+                SELECT id, x, y
+                    FROM node WHERE node.id IN (%(ids)s)',
                 %(source_id)s, %(target_id)s)""" % args
     
     def draw(self, rows, con, args, geomType, canvasItemList, mapCanvas):

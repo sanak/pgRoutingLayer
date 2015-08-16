@@ -377,7 +377,10 @@ class PgRoutingLayer:
             con = db.con
             
             srid, geomType = self.getSridAndGeomType(con, args)
-            function.prepare(con, args, geomType, self.canvasItemList)
+            if (function.getName() == 'alphashape') or (function.getName() == 'tsp(euclid)'):
+                args['node_query'] = Utils.getNodeQuery(args, geomType)
+
+            function.prepare(self.canvasItemList)
             
             query = function.getQuery(args)
             Utils.logMessage('Run:' + query)
@@ -429,38 +432,65 @@ class PgRoutingLayer:
                 'Following argument is not specified.\n' + ','.join(empties))
             return
         
-        args['path_query'] = function.getQuery(args)
-        
-        query = """
-            SELECT %(edge_table)s.*,
-                result.seq AS result_seq,
-                result.node AS result_node,
-                result.cost AS result_cost
-                FROM %(edge_table)s
-                JOIN
-                (%(path_query)s) AS result
-                ON %(edge_table)s.%(id)s = result.edge ORDER BY result.seq """ % args
-        
-        query = query.replace('\n', ' ')
-        query = re.sub(r'\s+', ' ', query)
-        query = query.replace('( ', '(')
-        query = query.replace(' )', ')')
-        query = query.strip()
-        Utils.logMessage('Export:\n' + query)
-        
         try:
             dados = str(self.dock.comboConnections.currentText())
             db = self.actionsDb[dados].connect()
+            
+            con = db.con
+            
+            query = ""
+            srid, geomType = self.getSridAndGeomType(con, args)
+            if function.getName() == 'alphashape':
+                args['node_query'] = Utils.getNodeQuery(args, geomType)
+                args['srid'] = srid
+                query = function.getQuery(args)
+                query = query.replace('SELECT x, y FROM pgr_alphashape(',
+                                      'SELECT 1 AS result_seq, ST_SetSRID(pgr_pointsAsPolygon, %(srid)d) AS %(geometry)s FROM pgr_pointsAsPolygon(' % args)
+                query = query.replace("''", "''''")
+            elif function.getName() == 'drivingDistance':
+                args['node_query'] = Utils.getNodeQuery(args, geomType)
+                args['result_query'] = function.getQuery(args)
+                query = """
+                    %(node_query)s
+                    SELECT node.*,
+                        result.seq AS result_seq,
+                        result.cost AS result_cost
+                        FROM node
+                        JOIN
+                        (%(result_query)s) AS result
+                        ON node.id = result.node ORDER BY result.seq""" % args
+            else:
+                args['result_query'] = function.getQuery(args)
+                query = """
+                    SELECT %(edge_table)s.*,
+                        result.seq AS result_seq,
+                        result.node AS result_node,
+                        result.cost AS result_cost
+                        FROM %(edge_table)s
+                        JOIN
+                        (%(result_query)s) AS result
+                        ON %(edge_table)s.%(id)s = result.edge ORDER BY result.seq""" % args
+            
+            query = query.replace('\n', ' ')
+            query = re.sub(r'\s+', ' ', query)
+            query = query.replace('( ', '(')
+            query = query.replace(' )', ')')
+            query = query.strip()
+            Utils.logMessage('Export:\n' + query)
             
             uri = db.getURI()
             uri.setDataSource("", "(" + query + ")", args['geometry'], "", "result_seq")
             
             # add vector layer to map
-            layerName = function.getName() + " - from " + args['source_id'] + " to "
-            if 'target_id' in args:
-                layerName += args['target_id']
+            layerName = function.getName() + " - from " + args['source_id']
+            if 'distance' in args:
+                layerName += " distance " + args['distance']
             else:
-                layerName += "many"
+                layerName += " to "
+                if 'target_id' in args:
+                    layerName += args['target_id']
+                else:
+                    layerName += "many"
             
             vl = self.iface.addVectorLayer(uri.uri(), layerName, db.getProviderName())
             

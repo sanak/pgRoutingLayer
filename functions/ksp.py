@@ -35,7 +35,7 @@ class Function(FunctionBase):
     def canExport(self):
         return True
     
-    def prepare(self, con, args, geomType, canvasItemList):
+    def prepare(self, canvasItemList):
         resultPathsRubberBands = canvasItemList['paths']
         for path in resultPathsRubberBands:
             path.reset(Utils.getRubberBandType(False))

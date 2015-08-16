@@ -31,9 +31,9 @@ class Function(FunctionBase):
     
     @classmethod
     def canExport(self):
-        return False
+        return True
     
-    def prepare(self, con, args, geomType, canvasItemList):
+    def prepare(self, canvasItemList):
         resultNodesVertexMarkers = canvasItemList['markers']
         for marker in resultNodesVertexMarkers:
             marker.setVisible(False)

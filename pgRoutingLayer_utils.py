@@ -75,3 +75,23 @@ def getRubberBandType(isPolygon):
 
 def logMessage(message, level=QgsMessageLog.INFO):
     QgsMessageLog.logMessage(message, 'pgRouting Layer', level)
+
+def getNodeQuery(args, geomType):
+    setStartPoint(geomType, args)
+    setEndPoint(geomType, args)
+    return """
+        WITH node AS (
+            SELECT id,
+                ST_X(%(geometry)s) AS x,
+                ST_Y(%(geometry)s) AS y,
+                %(geometry)s
+                FROM (
+                    SELECT %(source)s AS id,
+                        %(startpoint)s AS %(geometry)s
+                        FROM %(edge_table)s
+                    UNION
+                    SELECT %(target)s AS id,
+                        %(endpoint)s AS %(geometry)s
+                        FROM %(edge_table)s
+                ) AS node
+        )""" % args
