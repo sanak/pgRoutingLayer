@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>218</width>
-    <height>592</height>
+    <height>605</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,6 +15,9 @@
   </property>
   <widget class="QWidget" name="dockWidgetContents">
    <layout class="QVBoxLayout" name="verticalLayout">
+    <property name="spacing">
+     <number>3</number>
+    </property>
     <item>
      <layout class="QGridLayout" name="gridLayoutBase">
       <property name="spacing">
@@ -61,7 +64,7 @@
         <property name="maximumSize">
          <size>
           <width>16777215</width>
-          <height>20</height>
+          <height>16777215</height>
          </size>
         </property>
         <property name="locale">
@@ -158,8 +161,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>167</width>
-            <height>264</height>
+            <width>159</width>
+            <height>275</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_2">
@@ -690,107 +693,84 @@ _sql</string>
      </spacer>
     </item>
     <item>
-     <layout class="QHBoxLayout" name="horizontalLayoutCommands">
+     <layout class="QVBoxLayout" name="verticalLayoutCommands">
       <property name="spacing">
-       <number>3</number>
-      </property>
-      <property name="rightMargin">
        <number>0</number>
       </property>
       <item>
-       <widget class="QPushButton" name="buttonRun">
-        <property name="minimumSize">
-         <size>
-          <width>70</width>
-          <height>0</height>
-         </size>
+       <layout class="QHBoxLayout" name="horizontalLayoutCommands1">
+        <property name="spacing">
+         <number>3</number>
         </property>
-        <property name="maximumSize">
-         <size>
-          <width>16777215</width>
-          <height>16777215</height>
-         </size>
-        </property>
-        <property name="locale">
-         <locale language="English" country="UnitedStates"/>
-        </property>
-        <property name="text">
-         <string>Run</string>
-        </property>
-        <property name="flat">
-         <bool>false</bool>
-        </property>
-       </widget>
+        <item>
+         <widget class="QPushButton" name="buttonRun">
+          <property name="minimumSize">
+           <size>
+            <width>70</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="locale">
+           <locale language="English" country="UnitedStates"/>
+          </property>
+          <property name="text">
+           <string>Run</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="buttonClear">
+          <property name="minimumSize">
+           <size>
+            <width>70</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="locale">
+           <locale language="English" country="UnitedStates"/>
+          </property>
+          <property name="text">
+           <string>Clear</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
       <item>
-       <widget class="QPushButton" name="buttonClear">
-        <property name="minimumSize">
-         <size>
-          <width>70</width>
-          <height>0</height>
-         </size>
+       <layout class="QHBoxLayout" name="horizontalLayoutCommands2">
+        <property name="spacing">
+         <number>3</number>
         </property>
-        <property name="maximumSize">
-         <size>
-          <width>16777215</width>
-          <height>16777215</height>
-         </size>
-        </property>
-        <property name="locale">
-         <locale language="English" country="UnitedStates"/>
-        </property>
-        <property name="text">
-         <string>Clear</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </item>
-    <item>
-     <layout class="QHBoxLayout" name="horizontalLayout">
-      <property name="spacing">
-       <number>3</number>
-      </property>
-      <item>
-       <widget class="QPushButton" name="buttonExport">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="minimumSize">
-         <size>
-          <width>70</width>
-          <height>0</height>
-         </size>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>16777215</width>
-          <height>16777215</height>
-         </size>
-        </property>
-        <property name="locale">
-         <locale language="English" country="UnitedStates"/>
-        </property>
-        <property name="text">
-         <string>Export</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="buttonExportMerged">
-        <property name="minimumSize">
-         <size>
-          <width>70</width>
-          <height>0</height>
-         </size>
-        </property>
-        <property name="text">
-         <string>Export merged</string>
-        </property>
-       </widget>
+        <item>
+         <widget class="QPushButton" name="buttonExport">
+          <property name="minimumSize">
+           <size>
+            <width>70</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="locale">
+           <locale language="English" country="UnitedStates"/>
+          </property>
+          <property name="text">
+           <string>Export</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="buttonExportMerged">
+          <property name="minimumSize">
+           <size>
+            <width>70</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Export merged</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
      </layout>
     </item>
