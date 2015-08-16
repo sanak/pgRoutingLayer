@@ -67,13 +67,13 @@ class Function(FunctionBase):
                     SELECT ST_AsText(%(transform_s)sST_Line_Substring(%(geometry)s, %(source_pos)s, 1.0)%(transform_e)s) FROM %(edge_table)s
                         WHERE %(target)s = %(result_next_node_id)s AND %(id)s = %(result_edge_id)s
                     UNION
-                    SELECT ST_AsText(%(transform_s)sST_Line_Substring(ST_Reverse(%(geometry)s), %(source_pos)s, 1.0)%(transform_e)s) FROM %(edge_table)s
+                    SELECT ST_AsText(%(transform_s)sST_Line_Substring(ST_Reverse(%(geometry)s), 1.0 - %(source_pos)s, 1.0)%(transform_e)s) FROM %(edge_table)s
                         WHERE %(source)s = %(result_next_node_id)s AND %(id)s = %(result_edge_id)s;
                 """ % args
-            elif i == (count - 1):
+            elif i == (count - 1) and ((args['result_edge_id'] == -1) or (str(args['result_edge_id']) == args['target_id'])):
                 if args['result_edge_id'] != -1:
                     query2 = """
-                        SELECT ST_AsText(%(transform_s)sST_Line_Substring(%(geometry)s, 0.0, 1.0 - %(target_pos)s)%(transform_e)s) FROM %(edge_table)s
+                        SELECT ST_AsText(%(transform_s)sST_Line_Substring(%(geometry)s, 0.0, %(target_pos)s)%(transform_e)s) FROM %(edge_table)s
                             WHERE %(source)s = %(result_node_id)s AND %(id)s = %(result_edge_id)s
                         UNION
                         SELECT ST_AsText(%(transform_s)sST_Line_Substring(ST_Reverse(%(geometry)s), 0.0, 1.0 - %(target_pos)s)%(transform_e)s) FROM %(edge_table)s
