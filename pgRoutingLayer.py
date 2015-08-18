@@ -135,6 +135,7 @@ class PgRoutingLayer:
         
         #connect the action to each method
         QObject.connect(self.action, SIGNAL("triggered()"), self.show)
+        QObject.connect(self.dock.buttonReloadConnections, SIGNAL("clicked()"), self.reloadConnections)
         QObject.connect(self.dock.comboBoxFunction, SIGNAL("currentIndexChanged(const QString&)"), self.updateFunctionEnabled)
         QObject.connect(self.dock.buttonSelectIds, SIGNAL("clicked(bool)"), self.selectIds)
         QObject.connect(self.idsEmitPoint, SIGNAL("canvasClicked(const QgsPoint&, Qt::MouseButton)"), self.setIds)
@@ -151,12 +152,7 @@ class PgRoutingLayer:
         QObject.connect(self.dock.buttonClear, SIGNAL("clicked()"), self.clear)
         
         #populate the combo with connections
-        actions = conn.getAvailableConnections()
-        self.actionsDb = {}
-        for a in actions:
-            self.actionsDb[ unicode(a.text()) ] = a
-        for i in self.actionsDb:
-            self.dock.comboConnections.addItem(i)
+        self.reloadConnections()
         
         self.prevType = None
         self.functions = {}
@@ -183,9 +179,25 @@ class PgRoutingLayer:
         
     def unload(self):
         self.saveSettings()
+        self.clear()
         # Remove the plugin menu item and icon
         self.iface.removePluginDatabaseMenu("&pgRouting Layer", self.action)
         self.iface.removeDockWidget(self.dock)
+        
+    def reloadConnections(self):
+        currentText = str(self.dock.comboConnections.currentText())
+        self.dock.comboConnections.clear()
+
+        actions = conn.getAvailableConnections()
+        self.actionsDb = {}
+        for a in actions:
+            self.actionsDb[ unicode(a.text()) ] = a
+        for i in self.actionsDb:
+            self.dock.comboConnections.addItem(i)
+
+        idx = self.dock.comboConnections.findText(currentText)
+        if idx >= 0:
+            self.dock.comboConnections.setCurrentIndex(idx)
         
     def updateFunctionEnabled(self, text):
         function = self.functions[str(text)]
@@ -200,11 +212,9 @@ class PgRoutingLayer:
             control = getattr(self.dock, controlName)
             control.setVisible(True)
         
-        # adjust sql scroll area max height (TODO:initial display)
-        contents = self.dock.scrollAreaWidgetContents
-        margins = contents.layout().contentsMargins()
-        ##Utils.logMessage('%s - height:%d' % (text, contents.sizeHint().height())
-        self.dock.scrollAreaColumns.setMaximumHeight(contents.sizeHint().height() + margins.top() + margins.bottom())
+        # for initial display
+        self.dock.gridLayoutSqlColumns.invalidate()
+        self.dock.gridLayoutArguments.invalidate()
         
         if (not self.dock.checkBoxHasReverseCost.isChecked()) or (not self.dock.checkBoxHasReverseCost.isEnabled()):
             self.dock.lineEditReverseCost.setEnabled(False)
@@ -214,8 +224,10 @@ class PgRoutingLayer:
             self.clear()
             
         self.prevType = function.isEdgeBase()
-        
-        self.dock.buttonExport.setEnabled(function.canExport())
+
+        canExport = function.canExport()
+        self.dock.buttonExport.setEnabled(canExport)
+        self.dock.buttonExportMerged.setEnabled(canExport)
    
     def selectIds(self, checked):
         if checked:
@@ -239,12 +251,13 @@ class PgRoutingLayer:
             else:
                 self.dock.lineEditIds.setText(ids + "," + str(id))
             geom = QgsGeometry().fromWkt(wkt)
-            vertexMarker = QgsVertexMarker(self.iface.mapCanvas())
+            mapCanvas = self.iface.mapCanvas()
+            vertexMarker = QgsVertexMarker(mapCanvas)
             vertexMarker.setColor(Qt.green)
             vertexMarker.setPenWidth(2)
             vertexMarker.setCenter(geom.asPoint())
             self.idsVertexMarkers.append(vertexMarker)
-            self.iface.mapCanvas().clear() # TODO:
+            Utils.refreshMapCanvas(mapCanvas)
         
     def selectSourceId(self, checked):
         if checked:
@@ -280,7 +293,7 @@ class PgRoutingLayer:
                     for pt in geom.asPolyline():
                         self.sourceIdRubberBand.addPoint(pt)
                 self.dock.buttonSelectSourceId.click()
-        self.iface.mapCanvas().clear() # TODO:
+        Utils.refreshMapCanvas(self.iface.mapCanvas())
         
     def selectTargetId(self, checked):
         if checked:
@@ -316,7 +329,7 @@ class PgRoutingLayer:
                     for pt in geom.asPolyline():
                         self.targetIdRubberBand.addPoint(pt)
                 self.dock.buttonSelectTargetId.click()
-        self.iface.mapCanvas().clear() # TODO:
+        Utils.refreshMapCanvas(self.iface.mapCanvas())
         
     def selectTargetIds(self, checked):
         if checked:
@@ -340,12 +353,13 @@ class PgRoutingLayer:
             else:
                 self.dock.lineEditTargetIds.setText(ids + "," + str(id))
             geom = QgsGeometry().fromWkt(wkt)
-            vertexMarker = QgsVertexMarker(self.iface.mapCanvas())
+            mapCanvas = self.iface.mapCanvas()
+            vertexMarker = QgsVertexMarker(mapCanvas)
             vertexMarker.setColor(Qt.green)
             vertexMarker.setPenWidth(2)
             vertexMarker.setCenter(geom.asPoint())
             self.targetIdsVertexMarkers.append(vertexMarker)
-            self.iface.mapCanvas().clear() # TODO:
+            Utils.refreshMapCanvas(mapCanvas)
         
     def updateReverseCostEnabled(self, state):
         if state == Qt.Checked:
@@ -376,10 +390,17 @@ class PgRoutingLayer:
             
             con = db.con
             
+            version = Utils.getPgrVersion(con)
+            if not function.isSupportedVersion(version):
+                QApplication.restoreOverrideCursor()
+                QMessageBox.warning(self.dock, self.dock.windowTitle(),
+                    'This function is not supported in pgRouting ver' + str(version))
+                return
+            
             srid, geomType = self.getSridAndGeomType(con, args)
             if (function.getName() == 'alphashape') or (function.getName() == 'tsp(euclid)'):
                 args['node_query'] = Utils.getNodeQuery(args, geomType)
-
+            
             function.prepare(self.canvasItemList)
             
             query = function.getQuery(args)
@@ -437,6 +458,13 @@ class PgRoutingLayer:
             db = self.actionsDb[dados].connect()
             
             con = db.con
+            
+            version = Utils.getPgrVersion(con)
+            if not function.isSupportedVersion(version):
+                QApplication.restoreOverrideCursor()
+                QMessageBox.warning(self.dock, self.dock.windowTitle(),
+                    'This function is not supported in pgRouting ver' + str(version))
+                return
             
             query = ""
             srid, geomType = self.getSridAndGeomType(con, args)
@@ -529,29 +557,45 @@ class PgRoutingLayer:
                 'Following argument is not specified.\n' + ','.join(empties))
             return
         
-        args['path_query'] = function.getQuery(args)
-        
-        query = """SELECT 1 AS id, ST_LineMerge(%(geometry)s) AS %(geometry)s, ST_Length(ST_LineMerge(%(geometry)s)) AS route_length, result_cost FROM (
-            SELECT ST_Union(%(geometry)s) AS %(geometry)s, SUM(result_cost) AS result_cost FROM (
-            SELECT %(edge_table)s.*,
-                result.seq AS result_seq,
-                result.node AS result_node,
-                result.cost AS result_cost
-                FROM %(edge_table)s
-                JOIN
-                (%(path_query)s) AS result
-                ON %(edge_table)s.%(id)s = result.edge ORDER BY result.seq ) AS foo ) AS bar""" % args
-        
-        query = query.replace('\n', ' ')
-        query = re.sub(r'\s+', ' ', query)
-        query = query.replace('( ', '(')
-        query = query.replace(' )', ')')
-        query = query.strip()
-        Utils.logMessage('Export merged:\n' + query)
-        
         try:
             dados = str(self.dock.comboConnections.currentText())
             db = self.actionsDb[dados].connect()
+            
+            con = db.con
+            
+            version = Utils.getPgrVersion(con)
+            if not function.isSupportedVersion(version):
+                QApplication.restoreOverrideCursor()
+                QMessageBox.warning(self.dock, self.dock.windowTitle(),
+                    'This function is not supported in pgRouting ver' + str(version))
+                return
+            
+            unsupportedFunctionNames = ['alphashape', 'drivingDistance']
+            if function.getName() in unsupportedFunctionNames:
+                QApplication.restoreOverrideCursor()
+                QMessageBox.warning(self.dock, self.dock.windowTitle(),
+                    'Exporting merged %s is not supported' % '/'.join(unsupportedFunctionNames))
+                return
+            
+            args['result_query'] = function.getQuery(args)
+            
+            query = """SELECT 1 AS id, ST_LineMerge(%(geometry)s) AS %(geometry)s, ST_Length(ST_LineMerge(%(geometry)s)) AS route_length, result_cost FROM (
+                SELECT ST_Union(%(geometry)s) AS %(geometry)s, SUM(result_cost) AS result_cost FROM (
+                SELECT %(edge_table)s.*,
+                    result.seq AS result_seq,
+                    result.node AS result_node,
+                    result.cost AS result_cost
+                    FROM %(edge_table)s
+                    JOIN
+                    (%(result_query)s) AS result
+                    ON %(edge_table)s.%(id)s = result.edge ORDER BY result.seq ) AS foo ) AS bar""" % args
+            
+            query = query.replace('\n', ' ')
+            query = re.sub(r'\s+', ' ', query)
+            query = query.replace('( ', '(')
+            query = query.replace(' )', ')')
+            query = query.strip()
+            Utils.logMessage('Export merged:\n' + query)
             
             uri = db.getURI()
             uri.setDataSource("", "(" + query + ")", args['geometry'], "", "id")

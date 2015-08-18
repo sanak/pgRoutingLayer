@@ -73,6 +73,12 @@ def getRubberBandType(isPolygon):
         else:
             return QGis.Line
 
+def refreshMapCanvas(mapCanvas):
+    if QGis.QGIS_VERSION_INT < 20400:
+        return mapCanvas.clear()
+    else:
+        return mapCanvas.refresh()
+
 def logMessage(message, level=QgsMessageLog.INFO):
     QgsMessageLog.logMessage(message, 'pgRouting Layer', level)
 
@@ -95,3 +101,10 @@ def getNodeQuery(args, geomType):
                         FROM %(edge_table)s
                 ) AS node
         )""" % args
+
+def getPgrVersion(con):
+    cur = con.cursor()
+    cur.execute('SELECT version FROM pgr_version()')
+    versions = cur.fetchone()[0].split('.')
+    version = int(versions[0]) + (float(versions[1]) / 10.0)
+    return version
