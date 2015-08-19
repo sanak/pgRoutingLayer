@@ -75,6 +75,7 @@ class PgRoutingLayer:
         'labelTurnRestrictSql', 'plainTextEditTurnRestrictSql',
     ]
     FIND_RADIUS = 10
+    FRACTION_DECIMAL_PLACES = 2
     
     def __init__(self, iface):
         # Save reference to the QGIS interface
@@ -281,7 +282,7 @@ class PgRoutingLayer:
                 self.sourceIdVertexMarker.setVisible(True)
                 self.dock.buttonSelectSourceId.click()
         else:
-            result, id, wkt = self.findNearestLink(args, pt)
+            result, id, wkt, pos, pointWkt = self.findNearestLink(args, pt)
             if result:
                 self.dock.lineEditSourceId.setText(str(id))
                 geom = QgsGeometry().fromWkt(wkt)
@@ -292,6 +293,10 @@ class PgRoutingLayer:
                 elif geom.wkbType() == QGis.WKBLineString:
                     for pt in geom.asPolyline():
                         self.sourceIdRubberBand.addPoint(pt)
+                self.dock.lineEditSourcePos.setText(str(pos))
+                pointGeom = QgsGeometry().fromWkt(pointWkt)
+                self.sourceIdVertexMarker.setCenter(pointGeom.asPoint())
+                self.sourceIdVertexMarker.setVisible(True)
                 self.dock.buttonSelectSourceId.click()
         Utils.refreshMapCanvas(self.iface.mapCanvas())
         
@@ -317,7 +322,7 @@ class PgRoutingLayer:
                 self.targetIdVertexMarker.setVisible(True)
                 self.dock.buttonSelectTargetId.click()
         else:
-            result, id, wkt = self.findNearestLink(args, pt)
+            result, id, wkt, pos, pointWkt = self.findNearestLink(args, pt)
             if result:
                 self.dock.lineEditTargetId.setText(str(id))
                 geom = QgsGeometry().fromWkt(wkt)
@@ -328,6 +333,10 @@ class PgRoutingLayer:
                 elif geom.wkbType() == QGis.WKBLineString:
                     for pt in geom.asPolyline():
                         self.targetIdRubberBand.addPoint(pt)
+                self.dock.lineEditTargetPos.setText(str(pos))
+                pointGeom = QgsGeometry().fromWkt(pointWkt)
+                self.targetIdVertexMarker.setCenter(pointGeom.asPoint())
+                self.targetIdVertexMarker.setVisible(True)
                 self.dock.buttonSelectTargetId.click()
         Utils.refreshMapCanvas(self.iface.mapCanvas())
         
@@ -637,8 +646,10 @@ class PgRoutingLayer:
         self.targetIdsVertexMarkers = []
         self.dock.lineEditSourceId.setText("")
         self.sourceIdVertexMarker.setVisible(False)
+        self.dock.lineEditSourcePos.setText("0.5")
         self.dock.lineEditTargetId.setText("")
         self.targetIdVertexMarker.setVisible(False)
+        self.dock.lineEditTargetPos.setText("0.5")
         self.sourceIdRubberBand.reset(Utils.getRubberBandType(False))
         self.targetIdRubberBand.reset(Utils.getRubberBandType(False))
         for marker in self.canvasItemList['markers']:
@@ -917,18 +928,22 @@ class PgRoutingLayer:
             args['miny'] = rect.yMinimum()
             args['maxx'] = rect.xMaximum()
             args['maxy'] = rect.yMaximum()
+            args['decimal_places'] = self.FRACTION_DECIMAL_PLACES
             
             Utils.setTransformQuotes(args)
             
             # Searching for a link within the distance
             query = """
+            WITH point AS (
+                SELECT ST_GeomFromText('POINT(%(x)f %(y)f)', %(srid)d) AS geom
+            )
             SELECT %(id)s,
-                ST_Distance(
-                    %(geometry)s,
-                    ST_GeomFromText('POINT(%(x)f %(y)f)', %(srid)d)
-                ) AS dist,
-                ST_AsText(%(transform_s)s%(geometry)s%(transform_e)s)
-                FROM %(edge_table)s
+                ST_Distance(%(geometry)s, point.geom) AS dist,
+                ST_AsText(%(transform_s)s%(geometry)s%(transform_e)s) AS wkt,
+                ROUND(ST_Line_Locate_Point(geom_way, point.geom)::numeric, %(decimal_places)d) AS pos,
+                ST_AsText(%(transform_s)sST_Line_Interpolate_point(geom_way,
+                    ROUND(ST_Line_Locate_Point(geom_way, point.geom)::numeric, %(decimal_places)d))%(transform_e)s) AS pointWkt
+                FROM %(edge_table)s, point
                 WHERE ST_SetSRID('BOX3D(%(minx)f %(miny)f, %(maxx)f %(maxy)f)'::BOX3D, %(srid)d)
                     && %(geometry)s ORDER BY dist ASC LIMIT 1""" % args
             
@@ -940,8 +955,10 @@ class PgRoutingLayer:
                 return False, None, None
             link = row[0]
             wkt = row[2]
+            pos = row[3]
+            pointWkt = row[4]
             
-            return True, link, wkt
+            return True, link, wkt, pos, pointWkt
             
         except psycopg2.DatabaseError, e:
             QApplication.restoreOverrideCursor()
