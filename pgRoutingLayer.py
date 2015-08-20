@@ -49,7 +49,9 @@ class PgRoutingLayer:
         'kdijkstra_path',
         'bdDijkstra',
         'bdAstar',
-        'ksp'
+        'ksp',
+        'trsp_via_vertices',
+        'trsp_via_edges'
     ]
     TOGGLE_CONTROL_NAMES = [
         'labelId', 'lineEditId',
@@ -64,6 +66,7 @@ class PgRoutingLayer:
         'labelRule', 'lineEditRule',
         'labelToCost', 'lineEditToCost',
         'labelIds', 'lineEditIds', 'buttonSelectIds',
+        'labelPcts', 'lineEditPcts',
         'labelSourceId', 'lineEditSourceId', 'buttonSelectSourceId',
         'labelSourcePos', 'lineEditSourcePos',
         'labelTargetId', 'lineEditTargetId', 'buttonSelectTargetId',
@@ -91,6 +94,7 @@ class PgRoutingLayer:
         self.targetIdVertexMarker.setColor(Qt.green)
         self.targetIdVertexMarker.setPenWidth(2)
         self.targetIdVertexMarker.setVisible(False)
+        self.idsRubberBands = []
         self.sourceIdRubberBand = QgsRubberBand(self.iface.mapCanvas(), Utils.getRubberBandType(False))
         self.sourceIdRubberBand.setColor(Qt.cyan)
         self.sourceIdRubberBand.setWidth(4)
@@ -165,6 +169,7 @@ class PgRoutingLayer:
             self.dock.comboBoxFunction.addItem(funcname)
         
         self.dock.lineEditIds.setValidator(QRegExpValidator(QRegExp("[0-9,]+"), self.dock))
+        self.dock.lineEditPcts.setValidator(QRegExpValidator(QRegExp("[0-9,.]+"), self.dock))
         self.dock.lineEditSourceId.setValidator(QIntValidator())
         self.dock.lineEditSourcePos.setValidator(QDoubleValidator(0.0, 1.0, 10, self.dock))
         self.dock.lineEditTargetId.setValidator(QIntValidator())
@@ -234,31 +239,69 @@ class PgRoutingLayer:
         if checked:
             self.toggleSelectButton(self.dock.buttonSelectIds)
             self.dock.lineEditIds.setText("")
+            self.dock.lineEditPcts.setText("")
             if len(self.idsVertexMarkers) > 0:
                 for marker in self.idsVertexMarkers:
                     marker.setVisible(False)
                 self.idsVertexMarkers = []
+            if len(self.idsRubberBands) > 0:
+                for rubberBand in self.idsRubberBands:
+                    rubberBand.reset(Utils.getRubberBandType(False))
+                self.idsRubberBands = []
             self.iface.mapCanvas().setMapTool(self.idsEmitPoint)
         else:
             self.iface.mapCanvas().unsetMapTool(self.idsEmitPoint)
         
     def setIds(self, pt):
+        function = self.functions[str(self.dock.comboBoxFunction.currentText())]
         args = self.getBaseArguments()
-        result, id, wkt = self.findNearestNode(args, pt)
-        if result:
-            ids = self.dock.lineEditIds.text()
-            if not ids:
-                self.dock.lineEditIds.setText(str(id))
-            else:
-                self.dock.lineEditIds.setText(ids + "," + str(id))
-            geom = QgsGeometry().fromWkt(wkt)
-            mapCanvas = self.iface.mapCanvas()
-            vertexMarker = QgsVertexMarker(mapCanvas)
-            vertexMarker.setColor(Qt.green)
-            vertexMarker.setPenWidth(2)
-            vertexMarker.setCenter(geom.asPoint())
-            self.idsVertexMarkers.append(vertexMarker)
-            Utils.refreshMapCanvas(mapCanvas)
+        mapCanvas = self.iface.mapCanvas()
+        if not function.isEdgeBase():
+            result, id, wkt = self.findNearestNode(args, pt)
+            if result:
+                ids = self.dock.lineEditIds.text()
+                if not ids:
+                    self.dock.lineEditIds.setText(str(id))
+                else:
+                    self.dock.lineEditIds.setText(ids + "," + str(id))
+                geom = QgsGeometry().fromWkt(wkt)
+                vertexMarker = QgsVertexMarker(mapCanvas)
+                vertexMarker.setColor(Qt.green)
+                vertexMarker.setPenWidth(2)
+                vertexMarker.setCenter(geom.asPoint())
+                self.idsVertexMarkers.append(vertexMarker)
+        else:
+            result, id, wkt, pos, pointWkt = self.findNearestLink(args, pt)
+            if result:
+                ids = self.dock.lineEditIds.text()
+                if not ids:
+                    self.dock.lineEditIds.setText(str(id))
+                else:
+                    self.dock.lineEditIds.setText(ids + "," + str(id))
+                geom = QgsGeometry().fromWkt(wkt)
+                idRubberBand = QgsRubberBand(mapCanvas, Utils.getRubberBandType(False))
+                idRubberBand.setColor(Qt.yellow)
+                idRubberBand.setWidth(4)
+                if geom.wkbType() == QGis.WKBMultiLineString:
+                    for line in geom.asMultiPolyline():
+                        for pt in line:
+                            idRubberBand.addPoint(pt)
+                elif geom.wkbType() == QGis.WKBLineString:
+                    for pt in geom.asPolyline():
+                        idRubberBand.addPoint(pt)
+                self.idsRubberBands.append(idRubberBand)
+                pcts = self.dock.lineEditPcts.text()
+                if not pcts:
+                    self.dock.lineEditPcts.setText(str(pos))
+                else:
+                    self.dock.lineEditPcts.setText(pcts + "," + str(pos))
+                pointGeom = QgsGeometry().fromWkt(pointWkt)
+                vertexMarker = QgsVertexMarker(mapCanvas)
+                vertexMarker.setColor(Qt.green)
+                vertexMarker.setPenWidth(2)
+                vertexMarker.setCenter(pointGeom.asPoint())
+                self.idsVertexMarkers.append(vertexMarker)
+        Utils.refreshMapCanvas(mapCanvas)
         
     def selectSourceId(self, checked):
         if checked:
@@ -644,12 +687,16 @@ class PgRoutingLayer:
         for marker in self.targetIdsVertexMarkers:
             marker.setVisible(False)
         self.targetIdsVertexMarkers = []
+        self.dock.lineEditPcts.setText("")
         self.dock.lineEditSourceId.setText("")
         self.sourceIdVertexMarker.setVisible(False)
         self.dock.lineEditSourcePos.setText("0.5")
         self.dock.lineEditTargetId.setText("")
         self.targetIdVertexMarker.setVisible(False)
         self.dock.lineEditTargetPos.setText("0.5")
+        for rubberBand in self.idsRubberBands:
+            rubberBand.reset(Utils.getRubberBandType(False))
+        self.idsRubberBands = []
         self.sourceIdRubberBand.reset(Utils.getRubberBandType(False))
         self.targetIdRubberBand.reset(Utils.getRubberBandType(False))
         for marker in self.canvasItemList['markers']:
@@ -681,6 +728,7 @@ class PgRoutingLayer:
         args['geometry'] = self.dock.lineEditGeometry.text()
         if 'lineEditId' in controls:
             args['id'] = self.dock.lineEditId.text()
+
         if 'lineEditSource' in controls:
             args['source'] = self.dock.lineEditSource.text()
         
@@ -713,7 +761,10 @@ class PgRoutingLayer:
         
         if 'lineEditIds' in controls:
             args['ids'] = self.dock.lineEditIds.text()
-        
+
+        if 'lineEditPcts' in controls:
+            args['pcts'] = self.dock.lineEditPcts.text()
+
         if 'lineEditSourceId' in controls:
             args['source_id'] = self.dock.lineEditSourceId.text()
         
@@ -940,9 +991,9 @@ class PgRoutingLayer:
             SELECT %(id)s,
                 ST_Distance(%(geometry)s, point.geom) AS dist,
                 ST_AsText(%(transform_s)s%(geometry)s%(transform_e)s) AS wkt,
-                ROUND(ST_Line_Locate_Point(geom_way, point.geom)::numeric, %(decimal_places)d) AS pos,
-                ST_AsText(%(transform_s)sST_Line_Interpolate_point(geom_way,
-                    ROUND(ST_Line_Locate_Point(geom_way, point.geom)::numeric, %(decimal_places)d))%(transform_e)s) AS pointWkt
+                ROUND(ST_Line_Locate_Point(%(geometry)s, point.geom)::numeric, %(decimal_places)d) AS pos,
+                ST_AsText(%(transform_s)sST_Line_Interpolate_point(%(geometry)s,
+                    ROUND(ST_Line_Locate_Point(%(geometry)s, point.geom)::numeric, %(decimal_places)d))%(transform_e)s) AS pointWkt
                 FROM %(edge_table)s, point
                 WHERE ST_SetSRID('BOX3D(%(minx)f %(miny)f, %(maxx)f %(maxy)f)'::BOX3D, %(srid)d)
                     && %(geometry)s ORDER BY dist ASC LIMIT 1""" % args
