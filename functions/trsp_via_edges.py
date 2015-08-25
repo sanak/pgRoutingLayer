@@ -42,7 +42,7 @@ class Function(FunctionBase):
     
     def getQuery(self, args):
         return """
-            SELECT seq, id1 AS node, id2 AS edge, cost FROM pgr_trsp('
+            SELECT seq, id1 AS path, id2 AS node, id3 AS edge, cost FROM pgr_trspVia('
                 SELECT %(id)s AS id,
                     %(source)s::int4 AS source,
                     %(target)s::int4 AS target,
@@ -52,10 +52,9 @@ class Function(FunctionBase):
     
     def draw(self, rows, con, args, geomType, canvasItemList, mapCanvas):
         resultPathsRubberBands = canvasItemList['paths']
-        # TODO: detect each paths
-        rubberBand = QgsRubberBand(mapCanvas, Utils.getRubberBandType(False))
-        rubberBand.setColor(QColor(255, 0, 0, 128))
-        rubberBand.setWidth(4)
+        rubberBand = None
+        cur_path_id = -1
+
         i = 0
         count = len(rows)
         ids = args['ids'].split(',')
@@ -64,14 +63,25 @@ class Function(FunctionBase):
         args['first_pct'] = pcts[0]
         args['last_pct'] = pcts[len(pcts) - 1]
         for row in rows:
-            query2 = ""
             cur2 = con.cursor()
-            args['result_node_id'] = row[1]
-            args['result_edge_id'] = row[2]
-            args['result_cost'] = row[3]
+            args['result_path_id'] = row[1]
+            args['result_node_id'] = row[2]
+            args['result_edge_id'] = row[3]
+            args['result_cost'] = row[4]
 
+            if args['result_path_id'] != cur_path_id:
+                cur_path_id = args['result_path_id']
+                if rubberBand:
+                    resultPathsRubberBands.append(rubberBand)
+                    rubberBand = None
+
+                rubberBand = QgsRubberBand(mapCanvas, Utils.getRubberBandType(False))
+                rubberBand.setColor(QColor(255, 0, 0, 128))
+                rubberBand.setWidth(4)
+
+            query2 = ""
             if i == 0 and args['result_node_id'] == -1:
-                args['result_next_node_id'] = rows[i + 1][1]
+                args['result_next_node_id'] = rows[i + 1][2]
                 query2 = """
                     SELECT ST_AsText(%(transform_s)sST_Line_Substring(%(geometry)s, %(first_pct)s, 1.0)%(transform_e)s) FROM %(edge_table)s
                         WHERE %(target)s = %(result_next_node_id)s AND %(id)s = %(result_edge_id)s
@@ -118,6 +128,7 @@ class Function(FunctionBase):
 
         if rubberBand:
             resultPathsRubberBands.append(rubberBand)
+            rubberBand = None
 
     def __init__(self, ui):
         FunctionBase.__init__(self, ui)

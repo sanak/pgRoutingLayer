@@ -41,7 +41,7 @@ class Function(FunctionBase):
     
     def getQuery(self, args):
         return """
-            SELECT seq, id1 AS node, id2 AS edge, cost FROM pgr_trsp('
+            SELECT seq, id1 AS path, id2 AS node, id3 AS edge, cost FROM pgr_trspVia('
                 SELECT %(id)s AS id,
                     %(source)s::int4 AS source,
                     %(target)s::int4 AS target,
@@ -51,15 +51,25 @@ class Function(FunctionBase):
     
     def draw(self, rows, con, args, geomType, canvasItemList, mapCanvas):
         resultPathsRubberBands = canvasItemList['paths']
-        # TODO: detect each paths
-        rubberBand = QgsRubberBand(mapCanvas, Utils.getRubberBandType(False))
-        rubberBand.setColor(QColor(255, 0, 0, 128))
-        rubberBand.setWidth(4)
+        rubberBand = None
+        cur_path_id = -1
+
         for row in rows:
             cur2 = con.cursor()
-            args['result_node_id'] = row[1]
-            args['result_edge_id'] = row[2]
-            args['result_cost'] = row[3]
+            args['result_path_id'] = row[1]
+            args['result_node_id'] = row[2]
+            args['result_edge_id'] = row[3]
+            args['result_cost'] = row[4]
+            if args['result_path_id'] != cur_path_id:
+                cur_path_id = args['result_path_id']
+                if rubberBand:
+                    resultPathsRubberBands.append(rubberBand)
+                    rubberBand = None
+
+                rubberBand = QgsRubberBand(mapCanvas, Utils.getRubberBandType(False))
+                rubberBand.setColor(QColor(255, 0, 0, 128))
+                rubberBand.setWidth(4)
+
             if args['result_edge_id'] != -1:
                 query2 = """
                     SELECT ST_AsText(%(transform_s)s%(geometry)s%(transform_e)s) FROM %(edge_table)s
@@ -85,6 +95,7 @@ class Function(FunctionBase):
 
         if rubberBand:
             resultPathsRubberBands.append(rubberBand)
+            rubberBand = None
 
     def __init__(self, ui):
         FunctionBase.__init__(self, ui)
