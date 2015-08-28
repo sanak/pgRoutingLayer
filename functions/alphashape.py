@@ -22,6 +22,7 @@ class Function(FunctionBase):
             'labelReverseCost', 'lineEditReverseCost',
             'labelSourceId', 'lineEditSourceId', 'buttonSelectSourceId',
             'labelDistance', 'lineEditDistance',
+            'labelAlpha', 'lineEditAlpha',
             'checkBoxDirected', 'checkBoxHasReverseCost'
         ]
     
@@ -38,6 +39,10 @@ class Function(FunctionBase):
         resultAreaRubberBand.reset(Utils.getRubberBandType(True))
 
     def getQuery(self, args):
+        if args['version'] > 2.0:
+            args['alpha'] = ', ' + str(args['alpha'])
+        else:
+            args['alpha'] = ''
         return """
             SELECT x, y FROM pgr_alphashape('
                 %(node_query)s
@@ -51,7 +56,7 @@ class Function(FunctionBase):
                             %(cost)s::float8 AS cost%(reverse_cost)s
                             FROM %(edge_table)s'',
                         %(source_id)s, %(distance)s, %(directed)s, %(has_reverse_cost)s))
-                    AS dd ON node.id = dd.id1'::text)""" % args
+                    AS dd ON node.id = dd.id1'::text%(alpha)s)""" % args
     
     def draw(self, rows, con, args, geomType, canvasItemList, mapCanvas):
         resultAreaRubberBand = canvasItemList['area']
@@ -66,6 +71,9 @@ class Function(FunctionBase):
         for row in rows:
             x = row[0]
             y = row[1]
+            if args['version'] > 2.0 and ((x is None) or (y is None)):
+                Utils.logMessage(u'Alpha shape result geometry is MultiPolygon or has holes.\nPlease click [Export] button to see complete result.', level=QgsMessageLog.WARNING)
+                return
             pt = QgsPoint(x, y)
             if trans:
                 pt = trans.transform(pt)

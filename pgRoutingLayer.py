@@ -73,6 +73,7 @@ class PgRoutingLayer:
         'labelTargetIds', 'lineEditTargetIds', 'buttonSelectTargetIds',
         'labelTargetPos', 'lineEditTargetPos',
         'labelDistance', 'lineEditDistance',
+        'labelAlpha', 'lineEditAlpha',
         'labelPaths', 'lineEditPaths',
         'checkBoxDirected', 'checkBoxHasReverseCost',
         'labelTurnRestrictSql', 'plainTextEditTurnRestrictSql',
@@ -176,6 +177,7 @@ class PgRoutingLayer:
         self.dock.lineEditTargetPos.setValidator(QDoubleValidator(0.0, 1.0, 10, self.dock))
         self.dock.lineEditTargetIds.setValidator(QRegExpValidator(QRegExp("[0-9,]+"), self.dock))
         self.dock.lineEditDistance.setValidator(QDoubleValidator())
+        self.dock.lineEditAlpha.setValidator(QDoubleValidator())
         self.dock.lineEditPaths.setValidator(QIntValidator())
         
         self.loadSettings()
@@ -448,6 +450,7 @@ class PgRoutingLayer:
                 QMessageBox.warning(self.dock, self.dock.windowTitle(),
                     'This function is not supported in pgRouting ver' + str(version))
                 return
+            args['version'] = version
             
             srid, geomType = self.getSridAndGeomType(con, args)
             if (function.getName() == 'alphashape') or (function.getName() == 'tsp(euclid)'):
@@ -517,6 +520,7 @@ class PgRoutingLayer:
                 QMessageBox.warning(self.dock, self.dock.windowTitle(),
                     'This function is not supported in pgRouting ver' + str(version))
                 return
+            args['version'] = version
             
             query = ""
             srid, geomType = self.getSridAndGeomType(con, args)
@@ -621,6 +625,7 @@ class PgRoutingLayer:
                 QMessageBox.warning(self.dock, self.dock.windowTitle(),
                     'This function is not supported in pgRouting ver' + str(version))
                 return
+            args['version'] = version
             
             unsupportedFunctionNames = ['alphashape', 'drivingDistance']
             if function.getName() in unsupportedFunctionNames:
@@ -783,6 +788,9 @@ class PgRoutingLayer:
         if 'lineEditDistance' in controls:
             args['distance'] = self.dock.lineEditDistance.text()
         
+        if 'lineEditAlpha' in controls:
+            args['alpha'] = self.dock.lineEditAlpha.text()
+        
         if 'lineEditPaths' in controls:
             args['paths'] = self.dock.lineEditPaths.text()
         
@@ -797,7 +805,7 @@ class PgRoutingLayer:
                 args['reverse_cost'] = ', ' + args['reverse_cost'] + '::float8 AS reverse_cost'
         
         if 'plainTextEditTurnRestrictSql' in controls:
-            args['turn_restrict_sql'] = self.dock.plainTextEditTurnRestrictSql.toPlainText();
+            args['turn_restrict_sql'] = self.dock.plainTextEditTurnRestrictSql.toPlainText()
         
         return args
         
@@ -1044,12 +1052,14 @@ class PgRoutingLayer:
         self.dock.lineEditToCost.setText(Utils.getStringValue(settings, '/pgRoutingLayer/sql/to_cost', 'to_cost'))
         
         self.dock.lineEditIds.setText(Utils.getStringValue(settings, '/pgRoutingLayer/ids', ''))
+        self.dock.lineEditPcts.setText(Utils.getStringValue(settings, '/pgRoutingLayer/pcts', ''))
         self.dock.lineEditSourceId.setText(Utils.getStringValue(settings, '/pgRoutingLayer/source_id', ''))
         self.dock.lineEditSourcePos.setText(Utils.getStringValue(settings, '/pgRoutingLayer/source_pos', '0.5'))
         self.dock.lineEditTargetId.setText(Utils.getStringValue(settings, '/pgRoutingLayer/target_id', ''))
         self.dock.lineEditTargetPos.setText(Utils.getStringValue(settings, '/pgRoutingLayer/target_pos', '0.5'))
         self.dock.lineEditTargetIds.setText(Utils.getStringValue(settings, '/pgRoutingLayer/target_ids', ''))
         self.dock.lineEditDistance.setText(Utils.getStringValue(settings, '/pgRoutingLayer/distance', ''))
+        self.dock.lineEditAlpha.setText(Utils.getStringValue(settings, '/pgRoutingLayer/alpha', '0.0'))
         self.dock.lineEditPaths.setText(Utils.getStringValue(settings, '/pgRoutingLayer/paths', '2'))
         self.dock.checkBoxDirected.setChecked(Utils.getBoolValue(settings, '/pgRoutingLayer/directed', False))
         self.dock.checkBoxHasReverseCost.setChecked(Utils.getBoolValue(settings, '/pgRoutingLayer/has_reverse_cost', False))
@@ -1075,12 +1085,14 @@ class PgRoutingLayer:
         settings.setValue('/pgRoutingLayer/sql/to_cost', self.dock.lineEditToCost.text())
         
         settings.setValue('/pgRoutingLayer/ids', self.dock.lineEditIds.text())
+        settings.setValue('/pgRoutingLayer/pcts', self.dock.lineEditPcts.text())
         settings.setValue('/pgRoutingLayer/source_id', self.dock.lineEditSourceId.text())
         settings.setValue('/pgRoutingLayer/source_pos', self.dock.lineEditSourcePos.text())
         settings.setValue('/pgRoutingLayer/target_id', self.dock.lineEditTargetId.text())
         settings.setValue('/pgRoutingLayer/target_pos', self.dock.lineEditTargetPos.text())
         settings.setValue('/pgRoutingLayer/target_ids', self.dock.lineEditTargetIds.text())
         settings.setValue('/pgRoutingLayer/distance', self.dock.lineEditDistance.text())
+        settings.setValue('/pgRoutingLayer/alpha', self.dock.lineEditAlpha.text())
         settings.setValue('/pgRoutingLayer/paths', self.dock.lineEditPaths.text())
         settings.setValue('/pgRoutingLayer/directed', self.dock.checkBoxDirected.isChecked())
         settings.setValue('/pgRoutingLayer/has_reverse_cost', self.dock.checkBoxHasReverseCost.isChecked())
