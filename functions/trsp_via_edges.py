@@ -42,7 +42,7 @@ class Function(FunctionBase):
     
     def getQuery(self, args):
         return """
-            SELECT seq, id1 AS path, id2 AS node, id3 AS edge, cost FROM pgr_trspVia('
+            SELECT seq, id1 AS path, id2 AS node, id3 AS edge, cost FROM pgr_trspViaEdges('
                 SELECT %(id)s AS id,
                     %(source)s::int4 AS source,
                     %(target)s::int4 AS target,
@@ -60,8 +60,7 @@ class Function(FunctionBase):
         ids = args['ids'].split(',')
         args['last_id'] = ids[len(ids) - 1]
         pcts = args['pcts'].split(',')
-        args['first_pct'] = pcts[0]
-        args['last_pct'] = pcts[len(pcts) - 1]
+        pct_idx = 0
         for row in rows:
             cur2 = con.cursor()
             args['result_path_id'] = row[1]
@@ -80,22 +79,49 @@ class Function(FunctionBase):
                 rubberBand.setWidth(4)
 
             query2 = ""
-            if i == 0 and args['result_node_id'] == -1:
+            if i < (count - 1):
+                args['result_next_path_id'] = rows[i + 1][1]
                 args['result_next_node_id'] = rows[i + 1][2]
+                if args['result_next_path_id'] != args['result_path_id']:
+                    pct_idx += 1
+            elif i == (count - 1):
+                pct_idx = len(pcts) - 1
+            args['current_pct'] = pcts[pct_idx]
+
+            if i == 0 and args['result_node_id'] == -1:
                 query2 = """
-                    SELECT ST_AsText(%(transform_s)sST_Line_Substring(%(geometry)s, %(first_pct)s, 1.0)%(transform_e)s) FROM %(edge_table)s
+                    SELECT ST_AsText(%(transform_s)sST_Line_Substring(%(geometry)s, %(current_pct)s, 1.0)%(transform_e)s) FROM %(edge_table)s
                         WHERE %(target)s = %(result_next_node_id)s AND %(id)s = %(result_edge_id)s
                     UNION
-                    SELECT ST_AsText(%(transform_s)sST_Line_Substring(ST_Reverse(%(geometry)s), 1.0 - %(first_pct)s, 1.0)%(transform_e)s) FROM %(edge_table)s
+                    SELECT ST_AsText(%(transform_s)sST_Line_Substring(ST_Reverse(%(geometry)s), 1.0 - %(current_pct)s, 1.0)%(transform_e)s) FROM %(edge_table)s
                         WHERE %(source)s = %(result_next_node_id)s AND %(id)s = %(result_edge_id)s;
+                """ % args
+            elif i < (count - 1) and (args['result_path_id'] != args['result_next_path_id']) and (args['result_node_id'] == args['result_next_node_id']):
+                # round trip case
+                query2 = """
+                    SELECT ST_AsText(ST_LineMerge(ST_Collect(ARRAY[
+                    (
+                        SELECT ST_AsText(%(transform_s)sST_Line_Substring(%(geometry)s, 0.0, %(current_pct)s)%(transform_e)s) FROM %(edge_table)s
+                            WHERE %(source)s = %(result_node_id)s AND %(id)s = %(result_edge_id)s
+                        UNION
+                        SELECT ST_AsText(%(transform_s)sST_Line_Substring(ST_Reverse(%(geometry)s), 0.0, 1.0 - %(current_pct)s)%(transform_e)s) FROM %(edge_table)s
+                            WHERE %(target)s = %(result_node_id)s AND %(id)s = %(result_edge_id)s
+                    ),
+                    (
+                        SELECT ST_AsText(%(transform_s)sST_Reverse(ST_Line_Substring(%(geometry)s, 0.0, %(current_pct)s))%(transform_e)s) FROM %(edge_table)s
+                            WHERE %(source)s = %(result_node_id)s AND %(id)s = %(result_edge_id)s
+                        UNION
+                        SELECT ST_AsText(%(transform_s)sST_Reverse(ST_Line_Substring(ST_Reverse(%(geometry)s), 0.0, 1.0 - %(current_pct)s))%(transform_e)s) FROM %(edge_table)s
+                            WHERE %(target)s = %(result_node_id)s AND %(id)s = %(result_edge_id)s
+                    )])));
                 """ % args
             elif i == (count - 1) and ((args['result_edge_id'] == -1) or (str(args['result_edge_id']) == args['last_id'])):
                 if args['result_edge_id'] != -1:
                     query2 = """
-                        SELECT ST_AsText(%(transform_s)sST_Line_Substring(%(geometry)s, 0.0, %(last_pct)s)%(transform_e)s) FROM %(edge_table)s
+                        SELECT ST_AsText(%(transform_s)sST_Line_Substring(%(geometry)s, 0.0, %(current_pct)s)%(transform_e)s) FROM %(edge_table)s
                             WHERE %(source)s = %(result_node_id)s AND %(id)s = %(result_edge_id)s
                         UNION
-                        SELECT ST_AsText(%(transform_s)sST_Line_Substring(ST_Reverse(%(geometry)s), 0.0, 1.0 - %(last_pct)s)%(transform_e)s) FROM %(edge_table)s
+                        SELECT ST_AsText(%(transform_s)sST_Line_Substring(ST_Reverse(%(geometry)s), 0.0, 1.0 - %(current_pct)s)%(transform_e)s) FROM %(edge_table)s
                             WHERE %(target)s = %(result_node_id)s AND %(id)s = %(result_edge_id)s;
                     """ % args
                 else:
