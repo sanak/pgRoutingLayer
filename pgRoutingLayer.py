@@ -68,6 +68,7 @@ class PgRoutingLayer:
         'labelIds', 'lineEditIds', 'buttonSelectIds',
         'labelPcts', 'lineEditPcts',
         'labelSourceId', 'lineEditSourceId', 'buttonSelectSourceId',
+        'labelSourceIds', 'lineEditSourceIds', 'buttonSelectSourceIds',
         'labelSourcePos', 'lineEditSourcePos',
         'labelTargetId', 'lineEditTargetId', 'buttonSelectTargetId',
         'labelTargetIds', 'lineEditTargetIds', 'buttonSelectTargetIds',
@@ -88,6 +89,7 @@ class PgRoutingLayer:
         
         self.idsVertexMarkers = []
         self.targetIdsVertexMarkers = []
+        self.sourceIdsVertexMarkers = []
         self.sourceIdVertexMarker = QgsVertexMarker(self.iface.mapCanvas())
         self.sourceIdVertexMarker.setColor(Qt.blue)
         self.sourceIdVertexMarker.setPenWidth(2)
@@ -132,12 +134,14 @@ class PgRoutingLayer:
         self.iface.addDockWidget(Qt.LeftDockWidgetArea, self.dock)
         
         self.idsEmitPoint = QgsMapToolEmitPoint(self.iface.mapCanvas())
-        #self.idsEmitPoint.setButton(buttonSelectIds)
         self.sourceIdEmitPoint = QgsMapToolEmitPoint(self.iface.mapCanvas())
-        #self.sourceIdEmitPoint.setButton(buttonSelectSourceId)
         self.targetIdEmitPoint = QgsMapToolEmitPoint(self.iface.mapCanvas())
-        #self.targetIdEmitPoint.setButton(buttonSelectTargetId)
+        self.sourceIdsEmitPoint = QgsMapToolEmitPoint(self.iface.mapCanvas())
         self.targetIdsEmitPoint = QgsMapToolEmitPoint(self.iface.mapCanvas())
+
+        #self.idsEmitPoint.setButton(buttonSelectIds)
+        #self.targetIdEmitPoint.setButton(buttonSelectTargetId)
+        #self.sourceIdEmitPoint.setButton(buttonSelectSourceId)
         #self.targetIdsEmitPoint.setButton(buttonSelectTargetId)
         
         #connect the action to each method
@@ -146,12 +150,17 @@ class PgRoutingLayer:
         QObject.connect(self.dock.comboBoxFunction, SIGNAL("currentIndexChanged(const QString&)"), self.updateFunctionEnabled)
         QObject.connect(self.dock.buttonSelectIds, SIGNAL("clicked(bool)"), self.selectIds)
         QObject.connect(self.idsEmitPoint, SIGNAL("canvasClicked(const QgsPoint&, Qt::MouseButton)"), self.setIds)
+
         QObject.connect(self.dock.buttonSelectSourceId, SIGNAL("clicked(bool)"), self.selectSourceId)
         QObject.connect(self.sourceIdEmitPoint, SIGNAL("canvasClicked(const QgsPoint&, Qt::MouseButton)"), self.setSourceId)
+        QObject.connect(self.dock.buttonSelectSourceIds, SIGNAL("clicked(bool)"), self.selectSourceIds)
+        QObject.connect(self.sourceIdsEmitPoint, SIGNAL("canvasClicked(const QgsPoint&, Qt::MouseButton)"), self.setSourceIds)
+
         QObject.connect(self.dock.buttonSelectTargetId, SIGNAL("clicked(bool)"), self.selectTargetId)
         QObject.connect(self.targetIdEmitPoint, SIGNAL("canvasClicked(const QgsPoint&, Qt::MouseButton)"), self.setTargetId)
         QObject.connect(self.dock.buttonSelectTargetIds, SIGNAL("clicked(bool)"), self.selectTargetIds)
         QObject.connect(self.targetIdsEmitPoint, SIGNAL("canvasClicked(const QgsPoint&, Qt::MouseButton)"), self.setTargetIds)
+
         QObject.connect(self.dock.checkBoxHasReverseCost, SIGNAL("stateChanged(int)"), self.updateReverseCostEnabled)
         QObject.connect(self.dock.buttonRun, SIGNAL("clicked()"), self.run)
         QObject.connect(self.dock.buttonExport, SIGNAL("clicked()"), self.export)
@@ -175,6 +184,7 @@ class PgRoutingLayer:
         self.dock.lineEditPcts.setValidator(QRegExpValidator(QRegExp("[0-9,.]+"), self.dock))
         self.dock.lineEditSourceId.setValidator(QIntValidator())
         self.dock.lineEditSourcePos.setValidator(QDoubleValidator(0.0, 1.0, 10, self.dock))
+        self.dock.lineEditSourceIds.setValidator(QRegExpValidator(QRegExp("[0-9,]+"), self.dock))
         self.dock.lineEditTargetId.setValidator(QIntValidator())
         self.dock.lineEditTargetPos.setValidator(QDoubleValidator(0.0, 1.0, 10, self.dock))
         self.dock.lineEditTargetIds.setValidator(QRegExpValidator(QRegExp("[0-9,]+"), self.dock))
@@ -356,6 +366,38 @@ class PgRoutingLayer:
                 self.dock.buttonSelectSourceId.click()
         Utils.refreshMapCanvas(self.iface.mapCanvas())
         
+        
+    def selectSourceIds(self, checked):
+        if checked:
+            self.toggleSelectButton(self.dock.buttonSelectSourceIds)
+            self.dock.lineEditSourceIds.setText("")
+            if len(self.sourceIdsVertexMarkers) > 0:
+                for marker in self.sourceIdsVertexMarkers:
+                    marker.setVisible(False)
+                self.sourceIdsVertexMarkers = []
+            self.iface.mapCanvas().setMapTool(self.sourceIdsEmitPoint)
+        else:
+            self.iface.mapCanvas().unsetMapTool(self.sourceIdsEmitPoint)
+        
+    def setSourceIds(self, pt):
+        args = self.getBaseArguments()
+        result, id, wkt = self.findNearestNode(args, pt)
+        if result:
+            ids = self.dock.lineEditSourceIds.text()
+            if not ids:
+                self.dock.lineEditSourceIds.setText(str(id))
+            else:
+                self.dock.lineEditSourceIds.setText(ids + "," + str(id))
+            geom = QgsGeometry().fromWkt(wkt)
+            mapCanvas = self.iface.mapCanvas()
+            vertexMarker = QgsVertexMarker(mapCanvas)
+            vertexMarker.setColor(Qt.blue)
+            vertexMarker.setPenWidth(2)
+            vertexMarker.setCenter(geom.asPoint())
+            self.sourceIdsVertexMarkers.append(vertexMarker)
+            Utils.refreshMapCanvas(mapCanvas)
+
+
     def selectTargetId(self, checked):
         if checked:
             self.toggleSelectButton(self.dock.buttonSelectTargetId)
@@ -557,14 +599,12 @@ class PgRoutingLayer:
             else:
                 args['result_query'] = function.getQuery(args)
                 query = """
-                    SELECT %(edge_table)s.*,
-                        result.seq AS result_seq,
-                        result.node AS result_node,
-                        result.cost AS result_cost
+                    SELECT result.*, %(edge_table)s.*,
+                        result.seq AS result_seq
                         FROM %(edge_table)s
                         JOIN
                         (%(result_query)s) AS result
-                        ON %(edge_table)s.%(id)s = result.edge ORDER BY result.seq""" % args
+                        ON %(edge_table)s.%(id)s = result._edge ORDER BY result.seq""" % args
             
             query = query.replace('\n', ' ')
             query = re.sub(r'\s+', ' ', query)
@@ -577,7 +617,11 @@ class PgRoutingLayer:
             uri.setDataSource("", "(" + query + ")", args['geometry'], "", "result_seq")
             
             # add vector layer to map
-            layerName = function.getName() + " - from " + args['source_id']
+            layerName = function.getName() + " - from "
+            if 'source_id' in args:
+                layerName += args['source_id']
+            else:
+                layerName += "many"
             if 'distance' in args:
                 layerName += " distance " + args['distance']
             else:
@@ -699,10 +743,17 @@ class PgRoutingLayer:
         for marker in self.idsVertexMarkers:
             marker.setVisible(False)
         self.idsVertexMarkers = []
+
+        self.dock.lineEditSourceIds.setText("")
+        for marker in self.sourceIdsVertexMarkers:
+            marker.setVisible(False)
+        self.sourceIdsVertexMarkers = []
+
         self.dock.lineEditTargetIds.setText("")
         for marker in self.targetIdsVertexMarkers:
             marker.setVisible(False)
         self.targetIdsVertexMarkers = []
+
         self.dock.lineEditPcts.setText("")
         self.dock.lineEditSourceId.setText("")
         self.sourceIdVertexMarker.setVisible(False)
@@ -786,6 +837,9 @@ class PgRoutingLayer:
         
         if 'lineEditSourcePos' in controls:
             args['source_pos'] = self.dock.lineEditSourcePos.text()
+        
+        if 'lineEditSourceIds' in controls:
+            args['source_ids'] = self.dock.lineEditSourceIds.text()
         
         if 'lineEditTargetId' in controls:
             args['target_id'] = self.dock.lineEditTargetId.text()

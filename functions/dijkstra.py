@@ -36,7 +36,7 @@ class Function(FunctionBase):
                 'labelTarget', 'lineEditTarget',
                 'labelCost', 'lineEditCost',
                 'labelReverseCost', 'lineEditReverseCost',
-                'labelSourceId', 'lineEditSourceId', 'buttonSelectSourceId',
+                'labelSourceIds', 'lineEditSourceIds', 'buttonSelectSourceIds',
                 'labelTargetIds', 'lineEditTargetIds', 'buttonSelectTargetIds',
                 'checkBoxDirected', 'checkBoxHasReverseCost'
             ]
@@ -63,22 +63,27 @@ class Function(FunctionBase):
     def getQuery(self, args):
         if self.version < 2.1:
             return """
-                SELECT seq, id1 AS node, id2 AS edge, cost FROM pgr_dijkstra('
+                SELECT seq, '(' || %(source_id)s || ',' ||  %(target_id)s || ')' AS path_name,
+                    id1 AS _node, id2 AS _edge, _cost FROM pgr_dijkstra('
                     SELECT %(id)s::int4 AS id,
                         %(source)s::int4 AS source,
                         %(target)s::int4 AS target,
-                        %(cost)s::float8 AS cost%(reverse_cost)s
+                        %(cost)s::float8 AS cost
+                        %(reverse_cost)s
                         FROM %(edge_table)s',
                     %(source_id)s, %(target_id)s, %(directed)s, %(has_reverse_cost)s)""" % args
         else:
             return """
-                SELECT * FROM pgr_dijkstra('
+                SELECT seq, '(' || start_vid || ',' || end_vid || ')' AS path_name,
+                    path_seq AS _path_seq, start_vid AS _start_vid, end_vid AS _end_vid,
+                    node AS _node, edge AS _edge, cost AS _cost, lead(agg_cost) over() AS _agg_cost FROM pgr_dijkstra('
                     SELECT %(id)s AS id,
                         %(source)s AS source,
                         %(target)s AS target,
-                        %(cost)s AS cost%(reverse_cost)s
+                        %(cost)s AS cost
+                        %(reverse_cost)s
                         FROM %(edge_table)s',
-                    %(source_id)s, array[%(target_ids)s], %(directed)s)""" % args
+                    array[%(source_ids)s], array[%(target_ids)s], %(directed)s)""" % args
 
     def draw(self, rows, con, args, geomType, canvasItemList, mapCanvas):
         if self.version < 2.1:
@@ -86,9 +91,9 @@ class Function(FunctionBase):
             resultPathRubberBand = canvasItemList['path']
             for row in rows:
                 cur2 = con.cursor()
-                args['result_node_id'] = row[1]
-                args['result_edge_id'] = row[2]
-                args['result_cost'] = row[3]
+                args['result_node_id'] = row[2]
+                args['result_edge_id'] = row[3]
+                args['result_cost'] = row[4]
                 if args['result_edge_id'] != -1:
                     query2 = """
                         SELECT ST_AsText(%(transform_s)s%(geometry)s%(transform_e)s) FROM %(edge_table)s
@@ -121,8 +126,8 @@ class Function(FunctionBase):
             for row in rows:
                 cur2 = con.cursor()
                 args['result_path_id'] = row[2]
-                args['result_node_id'] = row[3]
-                args['result_edge_id'] = row[4]
+                args['result_node_id'] = row[4]
+                args['result_edge_id'] = row[5]
                 args['result_cost'] = row[5]
                 if args['result_path_id'] != cur_path_id:
                     cur_path_id = args['result_path_id']
@@ -141,7 +146,7 @@ class Function(FunctionBase):
                         UNION
                         SELECT ST_AsText(%(transform_s)sST_Reverse(%(geometry)s)%(transform_e)s) FROM %(edge_table)s
                             WHERE %(target)s = %(result_node_id)d AND %(id)s = %(result_edge_id)d;
-                    """ % args
+                        """ % args
                     ##Utils.logMessage(query2)
                     cur2.execute(query2)
                     row2 = cur2.fetchone()

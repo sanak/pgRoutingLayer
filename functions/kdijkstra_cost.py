@@ -51,6 +51,51 @@ class Function(FunctionBase):
                 %(source_id)s, array[%(target_ids)s], %(directed)s, %(has_reverse_cost)s)""" % args
     
     def draw(self, rows, con, args, geomType, canvasItemList, mapCanvas):
+        resultPathsRubberBands = canvasItemList['paths']
+        rubberBand = None
+        cur_path_id = -1
+        for row in rows:
+            cur2 = con.cursor()
+            args['result_path_id'] = row[0]
+            args['result_source_id'] = row[1]
+            args['result_target_id'] = row[2]
+            args['result_cost'] = row[3]
+            if args['result_path_id'] != cur_path_id:
+                cur_path_id = args['result_path_id']
+                if rubberBand:
+                    resultPathsRubberBands.append(rubberBand)
+                    rubberBand = None
+
+                rubberBand = QgsRubberBand(mapCanvas, Utils.getRubberBandType(False))
+                rubberBand.setColor(QColor(255, 0, 0, 128))
+                rubberBand.setWidth(4)
+            if args['result_cost'] != -1:
+                query2 = """
+                    SELECT ST_AsText( ST_MakeLine( 
+                        (SELECT the_geom FROM  %(edge_table)s_vertices_pgr WHERE %(id)s = %(result_source_id)d),
+                        (SELECT the_geom FROM  %(edge_table)s_vertices_pgr WHERE %(id)s = %(result_target_id)d)
+                        ))
+                    """ % args
+                ##Utils.logMessage(query2)
+                cur2.execute(query2)
+                row2 = cur2.fetchone()
+                ##Utils.logMessage(str(row2[0]))
+                assert row2, "Invalid result geometry. (path_id:%(result_path_id)d, saource_id:%(result_source_id)d, target_id:%(result_target_id)d)" % args
+
+                geom = QgsGeometry().fromWkt(str(row2[0]))
+                if geom.wkbType() == QGis.WKBMultiLineString:
+                    for line in geom.asMultiPolyline():
+                        for pt in line:
+                            rubberBand.addPoint(pt)
+                elif geom.wkbType() == QGis.WKBLineString:
+                    for pt in geom.asPolyline():
+                        rubberBand.addPoint(pt)
+
+        if rubberBand:
+            resultPathsRubberBands.append(rubberBand)
+            rubberBand = None
+
+
         resultNodesTextAnnotations = canvasItemList['annotations']
         Utils.setStartPoint(geomType, args)
         Utils.setEndPoint(geomType, args)
