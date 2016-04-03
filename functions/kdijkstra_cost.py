@@ -43,7 +43,7 @@ class Function(FunctionBase):
     def getQuery(self, args):
         return """
             SELECT seq, id1 AS source, id2 AS target, cost FROM pgr_kdijkstraCost('
-                SELECT %(id)s AS id,
+                SELECT %(id)s::int4 AS id,
                     %(source)s::int4 AS source,
                     %(target)s::int4 AS target,
                     %(cost)s::float8 AS cost%(reverse_cost)s
