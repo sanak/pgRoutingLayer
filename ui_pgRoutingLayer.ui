@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>265</width>
-    <height>822</height>
+    <height>1044</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -127,7 +127,16 @@
        <property name="sizeConstraint">
         <enum>QLayout::SetDefaultConstraint</enum>
        </property>
-       <property name="margin">
+       <property name="leftMargin">
+        <number>6</number>
+       </property>
+       <property name="topMargin">
+        <number>6</number>
+       </property>
+       <property name="rightMargin">
+        <number>6</number>
+       </property>
+       <property name="bottomMargin">
         <number>6</number>
        </property>
        <item>
@@ -182,6 +191,12 @@
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>150</height>
+          </size>
+         </property>
          <property name="maximumSize">
           <size>
            <width>16777215</width>
@@ -196,15 +211,24 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>206</width>
-            <height>275</height>
+            <width>223</width>
+            <height>319</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_2">
            <property name="sizeConstraint">
             <enum>QLayout::SetDefaultConstraint</enum>
            </property>
-           <property name="margin">
+           <property name="leftMargin">
+            <number>6</number>
+           </property>
+           <property name="topMargin">
+            <number>6</number>
+           </property>
+           <property name="rightMargin">
+            <number>6</number>
+           </property>
+           <property name="bottomMargin">
             <number>6</number>
            </property>
            <property name="spacing">
@@ -215,6 +239,13 @@
              <property name="spacing">
               <number>3</number>
              </property>
+             <item row="9" column="0">
+              <widget class="QLabel" name="labelRule">
+               <property name="text">
+                <string>rule</string>
+               </property>
+              </widget>
+             </item>
              <item row="0" column="0">
               <widget class="QLabel" name="labelId">
                <property name="locale">
@@ -265,6 +296,16 @@
                </property>
               </widget>
              </item>
+             <item row="3" column="0">
+              <widget class="QLabel" name="labelCost">
+               <property name="locale">
+                <locale language="English" country="UnitedStates"/>
+               </property>
+               <property name="text">
+                <string>cost</string>
+               </property>
+              </widget>
+             </item>
              <item row="2" column="1">
               <widget class="QLineEdit" name="lineEditTarget">
                <property name="toolTip">
@@ -275,13 +316,10 @@
                </property>
               </widget>
              </item>
-             <item row="3" column="0">
-              <widget class="QLabel" name="labelCost">
-               <property name="locale">
-                <locale language="English" country="UnitedStates"/>
-               </property>
+             <item row="4" column="0">
+              <widget class="QLabel" name="labelReverseCost">
                <property name="text">
-                <string>cost</string>
+                <string>reverse_cost</string>
                </property>
               </widget>
              </item>
@@ -295,24 +333,17 @@
                </property>
               </widget>
              </item>
-             <item row="4" column="1">
-              <widget class="QLineEdit" name="lineEditReverseCost">
-               <property name="toolTip">
-                <string>(optional) the cost for the reverse traversal of the edge. This is only used if &quot;directed graph&quot; and &quot;has reverse cost&quot; are ticked.</string>
-               </property>
-              </widget>
-             </item>
-             <item row="4" column="0">
-              <widget class="QLabel" name="labelReverseCost">
-               <property name="text">
-                <string>reverse_cost</string>
-               </property>
-              </widget>
-             </item>
              <item row="5" column="0">
               <widget class="QLabel" name="labelX1">
                <property name="text">
                 <string>x1</string>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="1">
+              <widget class="QLineEdit" name="lineEditReverseCost">
+               <property name="toolTip">
+                <string>(optional) the cost for the reverse traversal of the edge. This is only used if &quot;directed graph&quot; and &quot;has reverse cost&quot; are ticked.</string>
                </property>
               </widget>
              </item>
@@ -340,13 +371,6 @@
                </property>
               </widget>
              </item>
-             <item row="9" column="0">
-              <widget class="QLabel" name="labelRule">
-               <property name="text">
-                <string>rule</string>
-               </property>
-              </widget>
-             </item>
              <item row="10" column="0">
               <widget class="QLabel" name="labelToCost">
                <property name="text">
@@ -368,6 +392,25 @@
              </item>
              <item row="10" column="1">
               <widget class="QLineEdit" name="lineEditToCost"/>
+             </item>
+             <item row="4" column="2">
+              <widget class="QCheckBox" name="checkBoxHasReverseCost">
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="toolTip">
+                <string>if ticked, reverse cost will be used for the cost of the traversal of the edge in the opposite direction</string>
+               </property>
+               <property name="locale">
+                <locale language="English" country="UnitedStates"/>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+              </widget>
              </item>
             </layout>
            </item>
@@ -393,7 +436,16 @@
        <property name="spacing">
         <number>3</number>
        </property>
-       <property name="margin">
+       <property name="leftMargin">
+        <number>6</number>
+       </property>
+       <property name="topMargin">
+        <number>6</number>
+       </property>
+       <property name="rightMargin">
+        <number>6</number>
+       </property>
+       <property name="bottomMargin">
         <number>6</number>
        </property>
        <item>
@@ -412,12 +464,21 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>206</width>
-            <height>329</height>
+            <width>223</width>
+            <height>371</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_3">
-           <property name="margin">
+           <property name="leftMargin">
+            <number>6</number>
+           </property>
+           <property name="topMargin">
+            <number>6</number>
+           </property>
+           <property name="rightMargin">
+            <number>6</number>
+           </property>
+           <property name="bottomMargin">
             <number>6</number>
            </property>
            <property name="spacing">
@@ -667,25 +728,6 @@ _sql</string>
                  </property>
                 </widget>
                </item>
-               <item>
-                <widget class="QCheckBox" name="checkBoxHasReverseCost">
-                 <property name="maximumSize">
-                  <size>
-                   <width>16777215</width>
-                   <height>16777215</height>
-                  </size>
-                 </property>
-                 <property name="toolTip">
-                  <string>if ticked, reverse cost will be used for the cost of the traversal of the edge in the opposite direction</string>
-                 </property>
-                 <property name="locale">
-                  <locale language="English" country="UnitedStates"/>
-                 </property>
-                 <property name="text">
-                  <string>has_reverse_cost</string>
-                 </property>
-                </widget>
-               </item>
               </layout>
              </item>
              <item row="11" column="1" colspan="2">
@@ -920,7 +962,6 @@ _sql</string>
   <tabstop>lineEditDistance</tabstop>
   <tabstop>lineEditPaths</tabstop>
   <tabstop>checkBoxDirected</tabstop>
-  <tabstop>checkBoxHasReverseCost</tabstop>
   <tabstop>plainTextEditTurnRestrictSql</tabstop>
   <tabstop>buttonRun</tabstop>
  </tabstops>
