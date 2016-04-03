@@ -91,9 +91,9 @@ class Function(FunctionBase):
             resultPathRubberBand = canvasItemList['path']
             for row in rows:
                 cur2 = con.cursor()
-                args['result_node_id'] = row[2]
-                args['result_edge_id'] = row[3]
-                args['result_cost'] = row[4]
+                args['result_node_id'] = row[3]
+                args['result_edge_id'] = row[4]
+                args['result_cost'] = row[5]
                 if args['result_edge_id'] != -1:
                     query2 = """
                         SELECT ST_AsText(%(transform_s)s%(geometry)s%(transform_e)s) FROM %(edge_table)s
@@ -125,10 +125,10 @@ class Function(FunctionBase):
             cur_path_id = -1
             for row in rows:
                 cur2 = con.cursor()
-                args['result_path_id'] = row[2]
-                args['result_node_id'] = row[4]
-                args['result_edge_id'] = row[5]
-                args['result_cost'] = row[5]
+                args['result_path_id'] = row[3]
+                args['result_node_id'] = row[5]
+                args['result_edge_id'] = row[6]
+                args['result_cost'] = row[7]
                 if args['result_path_id'] != cur_path_id:
                     cur_path_id = args['result_path_id']
                     if rubberBand:
