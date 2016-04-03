@@ -599,7 +599,10 @@ class PgRoutingLayer:
             else:
                 args['result_query'] = function.getQuery(args)
                 query = """
-                    SELECT result.*, %(edge_table)s.*,
+                    SELECT 
+                        CASE WHEN result._node = %(edge_table)s.%(source)s THEN %(edge_table)s.%(geometry)s
+                        ELSE ST_Reverse(%(edge_table)s.%(geometry)s) END AS path_geom,
+                        result.*, %(edge_table)s.*,
                         result.seq AS result_seq
                         FROM %(edge_table)s
                         JOIN
@@ -614,14 +617,15 @@ class PgRoutingLayer:
             Utils.logMessage('Export:\n' + query)
             
             uri = db.getURI()
-            uri.setDataSource("", "(" + query + ")", args['geometry'], "", "result_seq")
+            uri.setDataSource("", "(" + query + ")", "path_geom", "", "result_seq")
+            #uri.setDataSource("", "(" + query + ")", args['geometry'], "", "result_seq")
             
             # add vector layer to map
             layerName = function.getName() + " - from "
             if 'source_id' in args:
                 layerName += args['source_id']
             else:
-                layerName += "many"
+                layerName += args['source_ids']
             if 'distance' in args:
                 layerName += " distance " + args['distance']
             else:
@@ -629,7 +633,7 @@ class PgRoutingLayer:
                 if 'target_id' in args:
                     layerName += args['target_id']
                 else:
-                    layerName += "many"
+                    layerName += args['target_ids']
             
             vl = self.iface.addVectorLayer(uri.uri(), layerName, db.getProviderName())
             

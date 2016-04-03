@@ -64,7 +64,7 @@ class Function(FunctionBase):
         if self.version < 2.1:
             return """
                 SELECT seq, '(' || %(source_id)s || ',' ||  %(target_id)s || ')' AS path_name,
-                    id1 AS _node, id2 AS _edge, _cost FROM pgr_dijkstra('
+                    id1 AS _node, id2 AS _edge, cost AS _cost FROM pgr_dijkstra('
                     SELECT %(id)s::int4 AS id,
                         %(source)s::int4 AS source,
                         %(target)s::int4 AS target,
@@ -122,10 +122,10 @@ class Function(FunctionBase):
     
             resultPathsRubberBands = canvasItemList['paths']
             rubberBand = None
-            cur_path_id = -1
+            cur_path_id = str(-1) + "," + str(-1)
             for row in rows:
                 cur2 = con.cursor()
-                args['result_path_id'] = row[3]
+                args['result_path_id'] = str(row[3]) + "," + str(row[4])
                 args['result_node_id'] = row[5]
                 args['result_edge_id'] = row[6]
                 args['result_cost'] = row[7]
@@ -151,7 +151,7 @@ class Function(FunctionBase):
                     cur2.execute(query2)
                     row2 = cur2.fetchone()
                     ##Utils.logMessage(str(row2[0]))
-                    assert row2, "Invalid result geometry. (path_id:%(result_path_id)d, node_id:%(result_node_id)d, edge_id:%(result_edge_id)d)" % args
+                    assert row2, "Invalid result geometry. (path_id:%(result_path_id)s, node_id:%(result_node_id)d, edge_id:%(result_edge_id)d)" % args
     
                     geom = QgsGeometry().fromWkt(str(row2[0]))
                     if geom.wkbType() == QGis.WKBMultiLineString:
