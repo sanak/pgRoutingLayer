@@ -39,7 +39,7 @@ class Function(FunctionBase):
     
     def getQuery(self, args):
         return """
-            SELECT seq, id1 AS node, id2 AS edge, cost FROM pgr_bdDijkstra('
+            SELECT seq, id1 AS _node, id2 AS _edge, cost AS _cost FROM pgr_bdDijkstra('
                 SELECT %(id)s AS id,
                     %(source)s::int4 AS source,
                     %(target)s::int4 AS target,

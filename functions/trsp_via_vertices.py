@@ -41,8 +41,8 @@ class Function(FunctionBase):
     
     def getQuery(self, args):
         return """
-            SELECT seq, id1 AS path, id2 AS node, id3 AS edge, cost FROM pgr_trspViaVertices('
-                SELECT %(id)s AS id,
+            SELECT seq, id1 AS _path, id2 AS _node, id3 AS _edge, cost AS _cost FROM pgr_trspViaVertices('
+                SELECT %(id)s::int4 AS id,
                     %(source)s::int4 AS source,
                     %(target)s::int4 AS target,
                     %(cost)s::float8 AS cost%(reverse_cost)s

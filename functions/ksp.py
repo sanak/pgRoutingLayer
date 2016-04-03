@@ -43,8 +43,8 @@ class Function(FunctionBase):
     
     def getQuery(self, args):
         return """
-            SELECT seq, id1 AS route, id2 AS node, id3 AS edge, cost FROM pgr_ksp('
-                SELECT %(id)s AS id,
+            SELECT seq, id1 AS _route, id2 AS _node, id3 AS _edge, cost AS _cost FROM pgr_ksp('
+                SELECT %(id)s::int4 AS id,
                     %(source)s::int4 AS source,
                     %(target)s::int4 AS target,
                     %(cost)s::float8 AS cost%(reverse_cost)s

@@ -42,7 +42,7 @@ class Function(FunctionBase):
     def getQuery(self, args):
         return """
             SELECT seq, id1 AS node, id2 AS edge, cost FROM pgr_drivingDistance('
-                SELECT %(id)s AS id,
+                SELECT %(id)s::int4 AS id,
                     %(source)s::int4 AS source,
                     %(target)s::int4 AS target,
                     %(cost)s::float8 AS cost%(reverse_cost)s
@@ -58,25 +58,26 @@ class Function(FunctionBase):
             args['result_node_id'] = row[1]
             args['result_edge_id'] = row[2]
             args['result_cost'] = row[3]
-            query2 = """
-                SELECT ST_AsText(%(transform_s)s%(startpoint)s%(transform_e)s) FROM %(edge_table)s
-                    WHERE %(source)s = %(result_node_id)d AND %(id)s = %(result_edge_id)d
-                UNION
-                SELECT ST_AsText(%(transform_s)s%(endpoint)s%(transform_e)s) FROM %(edge_table)s
-                    WHERE %(target)s = %(result_node_id)d AND %(id)s = %(result_edge_id)d
-            """ % args
-            cur2.execute(query2)
-            row2 = cur2.fetchone()
-            assert row2, "Invalid result geometry. (node_id:%(result_node_id)d, edge_id:%(result_edge_id)d)" % args
+            if args['result_edge_id'] != -1:
+                query2 = """
+                    SELECT ST_AsText(%(transform_s)s%(startpoint)s%(transform_e)s) FROM %(edge_table)s
+                        WHERE %(source)s = %(result_node_id)d AND %(id)s = %(result_edge_id)d
+                    UNION
+                    SELECT ST_AsText(%(transform_s)s%(endpoint)s%(transform_e)s) FROM %(edge_table)s
+                        WHERE %(target)s = %(result_node_id)d AND %(id)s = %(result_edge_id)d
+                    """ % args
+                cur2.execute(query2)
+                row2 = cur2.fetchone()
+                assert row2, "Invalid result geometry. (node_id:%(result_node_id)d, edge_id:%(result_edge_id)d)" % args
             
-            geom = QgsGeometry().fromWkt(str(row2[0]))
-            pt = geom.asPoint()
-            vertexMarker = QgsVertexMarker(mapCanvas)
-            vertexMarker.setColor(Qt.red)
-            vertexMarker.setPenWidth(2)
-            vertexMarker.setIconSize(5)
-            vertexMarker.setCenter(QgsPoint(pt))
-            resultNodesVertexMarkers.append(vertexMarker)
+                geom = QgsGeometry().fromWkt(str(row2[0]))
+                pt = geom.asPoint()
+                vertexMarker = QgsVertexMarker(mapCanvas)
+                vertexMarker.setColor(Qt.red)
+                vertexMarker.setPenWidth(2)
+                vertexMarker.setIconSize(5)
+                vertexMarker.setCenter(QgsPoint(pt))
+                resultNodesVertexMarkers.append(vertexMarker)
     
     def __init__(self, ui):
         FunctionBase.__init__(self, ui)

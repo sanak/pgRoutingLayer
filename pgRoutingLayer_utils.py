@@ -87,16 +87,16 @@ def getNodeQuery(args, geomType):
     setEndPoint(geomType, args)
     return """
         WITH node AS (
-            SELECT id,
+            SELECT id::int4,
                 ST_X(%(geometry)s) AS x,
                 ST_Y(%(geometry)s) AS y,
                 %(geometry)s
                 FROM (
-                    SELECT %(source)s AS id,
+                    SELECT %(source)s::int4 AS id,
                         %(startpoint)s AS %(geometry)s
                         FROM %(edge_table)s
                     UNION
-                    SELECT %(target)s AS id,
+                    SELECT %(target)s::int4 AS id,
                         %(endpoint)s AS %(geometry)s
                         FROM %(edge_table)s
                 ) AS node
