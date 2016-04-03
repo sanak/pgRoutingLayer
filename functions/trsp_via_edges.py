@@ -13,7 +13,7 @@ class Function(FunctionBase):
         return 'trsp(via edges)'
     
     @classmethod
-    def getControlNames(self):
+    def getControlNames(self, version):
         return [
             'labelId', 'lineEditId',
             'labelSource', 'lineEditSource',

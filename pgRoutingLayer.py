@@ -80,6 +80,7 @@ class PgRoutingLayer:
     ]
     FIND_RADIUS = 10
     FRACTION_DECIMAL_PLACES = 2
+    version = 2.0
     
     def __init__(self, iface):
         # Save reference to the QGIS interface
@@ -158,7 +159,8 @@ class PgRoutingLayer:
         QObject.connect(self.dock.buttonClear, SIGNAL("clicked()"), self.clear)
         
         #populate the combo with connections
-        self.reloadConnections()
+        self.version = self.reloadConnections()
+        assert (self.version == 2.2)
         
         self.prevType = None
         self.functions = {}
@@ -206,6 +208,15 @@ class PgRoutingLayer:
         idx = self.dock.comboConnections.findText(currentText)
         if idx >= 0:
             self.dock.comboConnections.setCurrentIndex(idx)
+            #get the pgr_version of the selected connection
+            dados = str(self.dock.comboConnections.currentText())
+            db = self.actionsDb[dados].connect()
+            con = db.con
+            version = Utils.getPgrVersion(con)
+            assert (version == 2.2)
+            return version
+        return 2.2
+
         
     def updateFunctionEnabled(self, text):
         function = self.functions[str(text)]
@@ -216,7 +227,7 @@ class PgRoutingLayer:
             control = getattr(self.dock, controlName)
             control.setVisible(False)
         
-        for controlName in function.getControlNames():
+        for controlName in function.getControlNames(self.version):
             control = getattr(self.dock, controlName)
             control.setVisible(True)
         
@@ -425,7 +436,7 @@ class PgRoutingLayer:
         QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
         
         function = self.functions[str(self.dock.comboBoxFunction.currentText())]
-        args = self.getArguments(function.getControlNames())
+        args = self.getArguments(function.getControlNames(self.version))
         
         empties = []
         for key in args.keys():
@@ -495,7 +506,7 @@ class PgRoutingLayer:
         QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
         
         function = self.functions[str(self.dock.comboBoxFunction.currentText())]
-        args = self.getArguments(function.getControlNames())
+        args = self.getArguments(function.getControlNames(self.version))
         
         empties = []
         for key in args.keys():
@@ -600,7 +611,7 @@ class PgRoutingLayer:
         QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
         
         function = self.functions[str(self.dock.comboBoxFunction.currentText())]
-        args = self.getArguments(function.getControlNames())
+        args = self.getArguments(function.getControlNames(self.version))
         
         empties = []
         for key in args.keys():

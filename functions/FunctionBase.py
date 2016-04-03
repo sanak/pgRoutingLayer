@@ -6,7 +6,7 @@ class FunctionBase(object):
         return ''
     
     @classmethod
-    def getControlNames(self):
+    def getControlNames(self, version):
         return [ '' ]
     
     @classmethod

@@ -13,7 +13,7 @@ class Function(FunctionBase):
         return 'ksp'
     
     @classmethod
-    def getControlNames(self):
+    def getControlNames(self, version):
         # 'id' and 'target' are used for finding nearest node
         return [
             'labelId', 'lineEditId',
