@@ -63,7 +63,7 @@ class Function(FunctionBase):
     def getQuery(self, args):
         if self.version < 2.1:
             return """
-                SELECT seq, '(' || %(source_id)s || ',' ||  %(target_id)s || ')' AS path_name,
+                SELECT seq, 
                     id1 AS _node, id2 AS _edge, cost AS _cost FROM pgr_dijkstra('
                     SELECT %(id)s::int4 AS id,
                         %(source)s::int4 AS source,
@@ -87,8 +87,30 @@ class Function(FunctionBase):
 
     def getExportMergeQuery(self, args):
         if self.version < 2.1:
-            return ''
+            args['result_query'] = self.getQuery(args)
+
+            args['with_geom_query'] = """SELECT ST_UNION(%(edge_table)s.%(geometry)s) AS the_geom
+                FROM %(edge_table)s JOIN result ON %(edge_table)s.%(id)s = result._edge
+                """ % args
+
+            args['aggregates_query'] = """SELECT
+                SUM(_cost) AS agg_cost,
+                array_agg(_node ORDER BY seq) AS _nodes,
+                array_agg(_edge ORDER BY seq) AS _edges
+                FROM result
+                """
+
+            query = """WITH
+                result AS ( %(result_query)s ),
+                with_geom AS ( %(with_geom_query)s ),
+                aggregates AS ( %(aggregates_query)s )
+                SELECT row_number() over() as seq,
+                _nodes, _edges, agg_cost,
+                ST_LineMerge(the_geom) AS path_geom FROM aggregates, with_geom 
+                """ % args
+
         else:
+
             args['result_query'] = self.getQuery(args)
 
             args['with_geom_query'] = """SELECT result.path_name, ST_UNION(%(edge_table)s.%(geometry)s) AS the_geom
@@ -124,9 +146,9 @@ class Function(FunctionBase):
             resultPathRubberBand = canvasItemList['path']
             for row in rows:
                 cur2 = con.cursor()
-                args['result_node_id'] = row[3]
-                args['result_edge_id'] = row[4]
-                args['result_cost'] = row[5]
+                args['result_node_id'] = row[2]
+                args['result_edge_id'] = row[3]
+                args['result_cost'] = row[4]
                 if args['result_edge_id'] != -1:
                     query2 = """
                         SELECT ST_AsText(%(transform_s)s%(geometry)s%(transform_e)s) FROM %(edge_table)s

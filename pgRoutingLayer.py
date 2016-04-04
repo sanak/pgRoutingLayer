@@ -679,39 +679,42 @@ class PgRoutingLayer:
                     'Exporting merged %s is not supported' % '/'.join(unsupportedFunctionNames))
                 return
             
-            if function.getName() == "dijkstra":
+            withgetExportMergequery = [
+                    'dijkstra',
+                    'kdijkstra(path)',
+                    'bdDijkstra',
+                    'astar',
+                    'bdAstar'
+                    ]
+            if function.getName() in withgetExportMergequery:
                 query = function.getExportMergeQuery(args)
             else:
                 args['result_query'] = function.getQuery(args)
-                args['with_geom_query'] = """SELECT result.*, %(edge_table)s.%(geometry)s AS the_geom
+
+                args['with_geom_query'] = """SELECT result._path, ST_UNION(%(edge_table)s.%(geometry)s) AS the_geom
                     FROM %(edge_table)s JOIN result ON %(edge_table)s.%(id)s = result._edge
-                     ORDER BY result.seq""" % args
+                    GROUP BY result._path
+                    ORDER BY result._path""" % args
+
 
                 args['aggregates_query'] = """SELECT
-                    row_number() over() as seq,
-                    path_name, _path,
+                    _path,
                     SUM(_cost) AS agg_cost,
                     array_agg(_node ORDER BY seq) AS _nodes,
-                    array_agg(_edge ORDER BY seq) AS _edges,
-                    ST_Union(the_geom) AS the_geom
-                    FROM with_geom
-                    GROUP BY path_name, _path
+                    array_agg(_edge ORDER BY seq) AS _edges
+                    FROM result
+                    GROUP BY _path
                     ORDER BY _path"""
 
                 query = """WITH
                     result AS ( %(result_query)s ),
                     with_geom AS ( %(with_geom_query)s ),
                     aggregates AS ( %(aggregates_query)s )
-                    SELECT seq, path_name, _path, agg_cost, _nodes, _edges,
-                    ST_LineMerge(the_geom) AS path_geom FROM aggregates""" % args
+                    SELECT row_number() over() as seq,
+                    _path, _nodes, _edges, agg_cost,
+                    ST_LineMerge(the_geom) AS path_geom FROM aggregates JOIN with_geom 
+                    USING (_path)""" % args
 
-                
-
-
-
-
-            
-            
             query = query.replace('\n', ' ')
             query = re.sub(r'\s+', ' ', query)
             query = query.replace('( ', '(')

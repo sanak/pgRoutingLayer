@@ -42,7 +42,7 @@ class Function(FunctionBase):
     
     def getQuery(self, args):
         return """
-            SELECT seq, '(' || %(source_id)s || ',' || id1 || ')' AS path_name,
+            SELECT seq, 
                 id1 AS _path, id2 AS _node, id3 AS _edge, cost AS _cost FROM pgr_kdijkstraPath('
                 SELECT %(id)s::int4 AS id,
                     %(source)s::int4 AS source,
@@ -50,27 +50,56 @@ class Function(FunctionBase):
                     %(cost)s::float8 AS cost%(reverse_cost)s
                     FROM %(edge_table)s',
                 %(source_id)s, array[%(target_ids)s], %(directed)s, %(has_reverse_cost)s)""" % args
-    
+
+    def getExportMergeQuery(self, args):
+        args['result_query'] = self.getQuery(args)
+
+        args['with_geom_query'] = """SELECT result._path, ST_UNION(%(edge_table)s.%(geometry)s) AS the_geom
+            FROM %(edge_table)s JOIN result ON %(edge_table)s.%(id)s = result._edge
+            GROUP BY result._path
+            ORDER BY result._path""" % args
+
+
+        args['aggregates_query'] = """SELECT
+            _path,
+            SUM(_cost) AS agg_cost,
+            array_agg(_node ORDER BY seq) AS _nodes,
+            array_agg(_edge ORDER BY seq) AS _edges
+            FROM result
+            GROUP BY _path
+            ORDER BY _path"""
+
+        query = """WITH
+            result AS ( %(result_query)s ),
+            with_geom AS ( %(with_geom_query)s ),
+            aggregates AS ( %(aggregates_query)s )
+            SELECT row_number() over() as seq,
+            _path, _nodes, _edges, agg_cost,
+            ST_LineMerge(the_geom) AS path_geom FROM aggregates JOIN with_geom 
+            USING (_path)""" % args
+        return query
+
+
     def draw(self, rows, con, args, geomType, canvasItemList, mapCanvas):
         resultPathsRubberBands = canvasItemList['paths']
         rubberBand = None
         cur_path_id = -1
         for row in rows:
             cur2 = con.cursor()
-            args['result_path_id'] = row[2]
-            args['result_node_id'] = row[3]
-            args['result_edge_id'] = row[4]
-            args['result_cost'] = row[5]
+            args['result_path_id'] = row[1]
+            args['result_node_id'] = row[2]
+            args['result_edge_id'] = row[3]
+            args['result_cost'] = row[4]
             if args['result_path_id'] != cur_path_id:
                 cur_path_id = args['result_path_id']
                 if rubberBand:
                     resultPathsRubberBands.append(rubberBand)
                     rubberBand = None
-                
+
                 rubberBand = QgsRubberBand(mapCanvas, Utils.getRubberBandType(False))
                 rubberBand.setColor(QColor(255, 0, 0, 128))
                 rubberBand.setWidth(4)
-            
+
             if args['result_edge_id'] != -1:
                 query2 = """
                     SELECT ST_AsText(%(transform_s)s%(geometry)s%(transform_e)s) FROM %(edge_table)s
@@ -92,7 +121,7 @@ class Function(FunctionBase):
                 row2 = cur2.fetchone()
                 ##Utils.logMessage(str(row2[0]))
                 assert row2, "Invalid result geometry. (path_id:%(result_path_id)d, node_id:%(result_node_id)d, edge_id:%(result_edge_id)d)" % args
-                
+
                 geom = QgsGeometry().fromWkt(str(row2[0]))
                 if geom.wkbType() == QGis.WKBMultiLineString:
                     for line in geom.asMultiPolyline():
@@ -101,10 +130,10 @@ class Function(FunctionBase):
                 elif geom.wkbType() == QGis.WKBLineString:
                     for pt in geom.asPolyline():
                         rubberBand.addPoint(pt)
-        
+
         if rubberBand:
             resultPathsRubberBands.append(rubberBand)
             rubberBand = None
-    
+
     def __init__(self, ui):
         FunctionBase.__init__(self, ui)
