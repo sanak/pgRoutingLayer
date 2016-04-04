@@ -42,7 +42,8 @@ class Function(FunctionBase):
     
     def getQuery(self, args):
         return """
-            SELECT seq, id1 AS _path, id2 AS _node, id3 AS _edge, cost AS _cost FROM pgr_kdijkstraPath('
+            SELECT seq, '(' || %(source_id)s || ',' || id1 || ')' AS path_name,
+                id1 AS _path, id2 AS _node, id3 AS _edge, cost AS _cost FROM pgr_kdijkstraPath('
                 SELECT %(id)s::int4 AS id,
                     %(source)s::int4 AS source,
                     %(target)s::int4 AS target,
@@ -56,10 +57,10 @@ class Function(FunctionBase):
         cur_path_id = -1
         for row in rows:
             cur2 = con.cursor()
-            args['result_path_id'] = row[1]
-            args['result_node_id'] = row[2]
-            args['result_edge_id'] = row[3]
-            args['result_cost'] = row[4]
+            args['result_path_id'] = row[2]
+            args['result_node_id'] = row[3]
+            args['result_edge_id'] = row[4]
+            args['result_cost'] = row[5]
             if args['result_path_id'] != cur_path_id:
                 cur_path_id = args['result_path_id']
                 if rubberBand:

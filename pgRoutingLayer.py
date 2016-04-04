@@ -618,23 +618,9 @@ class PgRoutingLayer:
             
             uri = db.getURI()
             uri.setDataSource("", "(" + query + ")", "path_geom", "", "result_seq")
-            #uri.setDataSource("", "(" + query + ")", args['geometry'], "", "result_seq")
             
-            # add vector layer to map
-            layerName = function.getName() + " - from "
-            if 'source_id' in args:
-                layerName += args['source_id']
-            else:
-                layerName += args['source_ids']
-            if 'distance' in args:
-                layerName += " distance " + args['distance']
-            else:
-                layerName += " to "
-                if 'target_id' in args:
-                    layerName += args['target_id']
-                else:
-                    layerName += args['target_ids']
-            
+            layerName = self.getLayerName(args)
+
             vl = self.iface.addVectorLayer(uri.uri(), layerName, db.getProviderName())
             
         except psycopg2.DatabaseError, e:
@@ -693,18 +679,38 @@ class PgRoutingLayer:
                     'Exporting merged %s is not supported' % '/'.join(unsupportedFunctionNames))
                 return
             
-            args['result_query'] = function.getQuery(args)
+            if function.getName() == "dijkstra":
+                query = function.getExportMergeQuery(args)
+            else:
+                args['result_query'] = function.getQuery(args)
+                args['with_geom_query'] = """SELECT result.*, %(edge_table)s.%(geometry)s AS the_geom
+                    FROM %(edge_table)s JOIN result ON %(edge_table)s.%(id)s = result._edge
+                     ORDER BY result.seq""" % args
+
+                args['aggregates_query'] = """SELECT
+                    row_number() over() as seq,
+                    path_name, _path,
+                    SUM(_cost) AS agg_cost,
+                    array_agg(_node ORDER BY seq) AS _nodes,
+                    array_agg(_edge ORDER BY seq) AS _edges,
+                    ST_Union(the_geom) AS the_geom
+                    FROM with_geom
+                    GROUP BY path_name, _path
+                    ORDER BY _path"""
+
+                query = """WITH
+                    result AS ( %(result_query)s ),
+                    with_geom AS ( %(with_geom_query)s ),
+                    aggregates AS ( %(aggregates_query)s )
+                    SELECT seq, path_name, _path, agg_cost, _nodes, _edges,
+                    ST_LineMerge(the_geom) AS path_geom FROM aggregates""" % args
+
+                
+
+
+
+
             
-            query = """SELECT 1 AS id, ST_LineMerge(%(geometry)s) AS %(geometry)s, ST_Length(ST_LineMerge(%(geometry)s)) AS route_length, result_cost FROM (
-                SELECT ST_Union(%(geometry)s) AS %(geometry)s, SUM(result_cost) AS result_cost FROM (
-                SELECT %(edge_table)s.*,
-                    result.seq AS result_seq,
-                    result.node AS result_node,
-                    result.cost AS result_cost
-                    FROM %(edge_table)s
-                    JOIN
-                    (%(result_query)s) AS result
-                    ON %(edge_table)s.%(id)s = result.edge ORDER BY result.seq ) AS foo ) AS bar""" % args
             
             query = query.replace('\n', ' ')
             query = re.sub(r'\s+', ' ', query)
@@ -714,14 +720,10 @@ class PgRoutingLayer:
             Utils.logMessage('Export merged:\n' + query)
             
             uri = db.getURI()
-            uri.setDataSource("", "(" + query + ")", args['geometry'], "", "id")
+            uri.setDataSource("", "(" + query + ")", "path_geom", "", "seq")
             
             # add vector layer to map
-            layerName = function.getName() + " - from " + args['source_id'] + " to "
-            if 'target_id' in args:
-                layerName += args['target_id']
-            else:
-                layerName += "many"
+            layerName = "(M)" +  self.getLayerName(args)
             
             vl = self.iface.addVectorLayer(uri.uri(), layerName, db.getProviderName())
             
@@ -742,6 +744,36 @@ class PgRoutingLayer:
                     QMessageBox.critical(self.dock, self.dock.windowTitle(),
                         'server closed the connection unexpectedly')
         
+    def getLayerName(self, args):
+        function = self.functions[str(self.dock.comboBoxFunction.currentText())]
+        layerName = function.getName() 
+        if args['directed'] == 'true':
+            layerName +=  " (D) "
+        else:
+            layerName +=  " (U) "
+
+        if 'source_id' in args:
+            layerName +=  " - from " + args['source_id']
+        elif 'ids' in args:
+            layerName += " - Via " + args['ids']
+        else:
+            layerName +=  " - from " + args['source_ids']
+
+        if 'ids' in args:
+            layerName += " "
+        elif 'distance' in args:
+            layerName += " distance " + args['distance']
+        else:
+            layerName += " to "
+            if 'target_id' in args:
+                layerName += args['target_id']
+            else:
+                layerName += args['target_ids']
+        return layerName
+            
+
+
+
     def clear(self):
         self.dock.lineEditIds.setText("")
         for marker in self.idsVertexMarkers:

@@ -26,6 +26,9 @@ class FunctionBase(object):
     def getQuery(self, args):
         return ''
     
+    def getExportMergeQuery(self, args):
+        return ''
+    
     def draw(self, rows, con, args, geomType, canvasItemList, mapCanvas):
         pass
     
