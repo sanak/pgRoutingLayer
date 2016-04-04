@@ -582,28 +582,30 @@ class PgRoutingLayer:
                 args['srid'] = srid
                 query = function.getQuery(args)
                 query = query.replace('SELECT x, y FROM pgr_alphashape(',
-                                      'SELECT 1 AS result_seq, ST_SetSRID(pgr_pointsAsPolygon, %(srid)d) AS %(geometry)s FROM pgr_pointsAsPolygon(' % args)
+                                      'SELECT 1 AS seq, ST_SetSRID(pgr_pointsAsPolygon, %(srid)d) AS path_geom FROM pgr_pointsAsPolygon(' % args)
                 query = query.replace("''", "''''")
             elif function.getName() == 'drivingDistance':
-                args['node_query'] = Utils.getNodeQuery(args, geomType)
                 args['result_query'] = function.getQuery(args)
-                query = """
-                    %(node_query)s
-                    SELECT node.*,
-                        result.seq AS result_seq,
-                        result.cost AS result_cost
-                        FROM node
-                        JOIN
-                        (%(result_query)s) AS result
-                        ON node.id = result.node ORDER BY result.seq""" % args
+
+                args['with_geom_query'] = """SELECT result.seq AS seq, ST_X(the_geom) AS x, ST_Y(the_geom) AS y, the_geom AS path_geom
+                    FROM %(edge_table)s_vertices_pgr JOIN result ON %(edge_table)s_vertices_pgr.%(id)s = result._node
+                    """ % args
+
+                query = """WITH
+                    result AS ( %(result_query)s ),
+                    with_geom AS ( %(with_geom_query)s )
+                    SELECT seq, _node, _edge, _cost, x, y, path_geom
+                    FROM result JOIN with_geom 
+                    USING (seq)
+                    ORDER BY result.seq""" % args
+
             else:
                 args['result_query'] = function.getQuery(args)
                 query = """
                     SELECT 
                         CASE WHEN result._node = %(edge_table)s.%(source)s THEN %(edge_table)s.%(geometry)s
                         ELSE ST_Reverse(%(edge_table)s.%(geometry)s) END AS path_geom,
-                        result.*, %(edge_table)s.*,
-                        result.seq AS result_seq
+                        result.*, %(edge_table)s.*
                         FROM %(edge_table)s
                         JOIN
                         (%(result_query)s) AS result
@@ -617,7 +619,7 @@ class PgRoutingLayer:
             Utils.logMessage('Export:\n' + query)
             
             uri = db.getURI()
-            uri.setDataSource("", "(" + query + ")", "path_geom", "", "result_seq")
+            uri.setDataSource("", "(" + query + ")", "path_geom", "", "seq")
             
             layerName = self.getLayerName(args)
 
@@ -684,36 +686,35 @@ class PgRoutingLayer:
                     'kdijkstra(path)',
                     'bdDijkstra',
                     'astar',
-                    'bdAstar'
+                    'bdAstar',
+                    'trsp(vertex)'
                     ]
             if function.getName() in withgetExportMergequery:
                 query = function.getExportMergeQuery(args)
             else:
                 args['result_query'] = function.getQuery(args)
 
-                args['with_geom_query'] = """SELECT result._path, ST_UNION(%(edge_table)s.%(geometry)s) AS the_geom
+                args['with_geom_query'] = """SELECT ST_UNION(%(edge_table)s.%(geometry)s) AS the_geom
                     FROM %(edge_table)s JOIN result ON %(edge_table)s.%(id)s = result._edge
-                    GROUP BY result._path
-                    ORDER BY result._path""" % args
+                    """ % args
 
 
                 args['aggregates_query'] = """SELECT
-                    _path,
                     SUM(_cost) AS agg_cost,
                     array_agg(_node ORDER BY seq) AS _nodes,
                     array_agg(_edge ORDER BY seq) AS _edges
                     FROM result
-                    GROUP BY _path
-                    ORDER BY _path"""
+                    """
 
                 query = """WITH
                     result AS ( %(result_query)s ),
                     with_geom AS ( %(with_geom_query)s ),
                     aggregates AS ( %(aggregates_query)s )
                     SELECT row_number() over() as seq,
-                    _path, _nodes, _edges, agg_cost,
-                    ST_LineMerge(the_geom) AS path_geom FROM aggregates JOIN with_geom 
-                    USING (_path)""" % args
+                    _nodes, _edges, agg_cost,
+                    ST_LineMerge(the_geom) AS path_geom
+                    FROM aggregates, with_geom 
+                    """ % args
 
             query = query.replace('\n', ' ')
             query = re.sub(r'\s+', ' ', query)
@@ -750,7 +751,7 @@ class PgRoutingLayer:
     def getLayerName(self, args):
         function = self.functions[str(self.dock.comboBoxFunction.currentText())]
         layerName = function.getName() 
-        if args['directed'] == 'true':
+        if 'directed' in args and args['directed'] == 'true':
             layerName +=  " (D) "
         else:
             layerName +=  " (U) "
