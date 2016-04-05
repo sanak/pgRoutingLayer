@@ -169,7 +169,8 @@ class PgRoutingLayer:
         
         #populate the combo with connections
         self.version = self.reloadConnections()
-        assert (self.version == 2.2)
+        Utils.logMessage("startup version " + str(self.version))
+
         
         self.prevType = None
         self.functions = {}
@@ -218,17 +219,27 @@ class PgRoutingLayer:
         idx = self.dock.comboConnections.findText(currentText)
         if idx >= 0:
             self.dock.comboConnections.setCurrentIndex(idx)
-            #get the pgr_version of the selected connection
-            dados = str(self.dock.comboConnections.currentText())
-            db = self.actionsDb[dados].connect()
-            con = db.con
-            version = Utils.getPgrVersion(con)
-            assert (version == 2.2)
-            return version
-        return 2.2
 
-        
+
+        #get the pgr_version of the selected connection
+        dados = str(self.dock.comboConnections.currentText())
+        db = self.actionsDb[dados].connect()
+        con = db.con
+        version = Utils.getPgrVersion(con)
+        return version
+
+
+    def updateConnectionEnabled(self):
+        dados = str(self.dock.comboConnections.currentText())
+        db = self.actionsDb[dados].connect()
+        con = db.con
+        self.version = Utils.getPgrVersion(con)
+        Utils.logMessage("dados " + dados)
+        Utils.logMessage("update connection version " + str(self.version))
+
+
     def updateFunctionEnabled(self, text):
+        self.updateConnectionEnabled()
         function = self.functions[str(text)]
         
         self.toggleSelectButton(None)
@@ -237,6 +248,7 @@ class PgRoutingLayer:
             control = getattr(self.dock, controlName)
             control.setVisible(False)
         
+        Utils.logMessage("update enabled version " + str(self.version))
         for controlName in function.getControlNames(self.version):
             control = getattr(self.dock, controlName)
             control.setVisible(True)
@@ -1160,6 +1172,7 @@ class PgRoutingLayer:
         self.dock.lineEditPcts.setText(Utils.getStringValue(settings, '/pgRoutingLayer/pcts', ''))
         self.dock.lineEditSourceId.setText(Utils.getStringValue(settings, '/pgRoutingLayer/source_id', ''))
         self.dock.lineEditSourcePos.setText(Utils.getStringValue(settings, '/pgRoutingLayer/source_pos', '0.5'))
+        self.dock.lineEditTargetIds.setText(Utils.getStringValue(settings, '/pgRoutingLayer/source_ids', ''))
         self.dock.lineEditTargetId.setText(Utils.getStringValue(settings, '/pgRoutingLayer/target_id', ''))
         self.dock.lineEditTargetPos.setText(Utils.getStringValue(settings, '/pgRoutingLayer/target_pos', '0.5'))
         self.dock.lineEditTargetIds.setText(Utils.getStringValue(settings, '/pgRoutingLayer/target_ids', ''))
@@ -1192,6 +1205,7 @@ class PgRoutingLayer:
         settings.setValue('/pgRoutingLayer/ids', self.dock.lineEditIds.text())
         settings.setValue('/pgRoutingLayer/pcts', self.dock.lineEditPcts.text())
         settings.setValue('/pgRoutingLayer/source_id', self.dock.lineEditSourceId.text())
+        settings.setValue('/pgRoutingLayer/source_ids', self.dock.lineEditSourceId.text())
         settings.setValue('/pgRoutingLayer/source_pos', self.dock.lineEditSourcePos.text())
         settings.setValue('/pgRoutingLayer/target_id', self.dock.lineEditTargetId.text())
         settings.setValue('/pgRoutingLayer/target_pos', self.dock.lineEditTargetPos.text())
