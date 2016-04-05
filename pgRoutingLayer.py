@@ -82,6 +82,7 @@ class PgRoutingLayer:
     FIND_RADIUS = 10
     FRACTION_DECIMAL_PLACES = 2
     version = 2.0
+    functions = {}
     
     def __init__(self, iface):
         # Save reference to the QGIS interface
@@ -147,6 +148,7 @@ class PgRoutingLayer:
         #connect the action to each method
         QObject.connect(self.action, SIGNAL("triggered()"), self.show)
         QObject.connect(self.dock.buttonReloadConnections, SIGNAL("clicked()"), self.reloadConnections)
+        QObject.connect(self.dock.comboConnections, SIGNAL("currentIndexChanged(const QString&)"), self.updateConnectionEnabled)
         QObject.connect(self.dock.comboBoxFunction, SIGNAL("currentIndexChanged(const QString&)"), self.updateFunctionEnabled)
         QObject.connect(self.dock.buttonSelectIds, SIGNAL("clicked(bool)"), self.selectIds)
         QObject.connect(self.idsEmitPoint, SIGNAL("canvasClicked(const QgsPoint&, Qt::MouseButton)"), self.setIds)
@@ -168,7 +170,7 @@ class PgRoutingLayer:
         QObject.connect(self.dock.buttonClear, SIGNAL("clicked()"), self.clear)
         
         #populate the combo with connections
-        self.version = self.reloadConnections()
+        self.reloadConnections()
         Utils.logMessage("startup version " + str(self.version))
 
         
@@ -220,13 +222,8 @@ class PgRoutingLayer:
         if idx >= 0:
             self.dock.comboConnections.setCurrentIndex(idx)
 
+        self.updateConnectionEnabled()
 
-        #get the pgr_version of the selected connection
-        dados = str(self.dock.comboConnections.currentText())
-        db = self.actionsDb[dados].connect()
-        con = db.con
-        version = Utils.getPgrVersion(con)
-        return version
 
 
     def updateConnectionEnabled(self):
@@ -236,10 +233,20 @@ class PgRoutingLayer:
         self.version = Utils.getPgrVersion(con)
         Utils.logMessage("dados " + dados)
         Utils.logMessage("update connection version " + str(self.version))
+        currentFunction = self.dock.comboBoxFunction.currentText()
+        if currentFunction =='':
+            return
+        #idx = self.dock.comboBoxFunction.findText(currentFunction)
+        #if idx >= 0:
+        #    self.dock.comboBoxFunction.setCurrentIndex(idx)
+        #if fn =='':
+        #    fn = 'dijkstra'
+        #Utils.logMessage("Function " + str(fn))
+        self.updateFunctionEnabled(currentFunction)
 
 
     def updateFunctionEnabled(self, text):
-        self.updateConnectionEnabled()
+        Utils.logMessage("FUNC " + text)
         function = self.functions[str(text)]
         
         self.toggleSelectButton(None)

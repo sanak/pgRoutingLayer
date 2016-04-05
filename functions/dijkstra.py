@@ -142,13 +142,12 @@ class Function(FunctionBase):
 
     def draw(self, rows, con, args, geomType, canvasItemList, mapCanvas):
         if self.version < 2.1:
-            draw_new(rows, con, args, geomType, canvasItemList, mapCanvas)
             resultPathRubberBand = canvasItemList['path']
             for row in rows:
                 cur2 = con.cursor()
-                args['result_node_id'] = row[2]
-                args['result_edge_id'] = row[3]
-                args['result_cost'] = row[4]
+                args['result_node_id'] = row[1]
+                args['result_edge_id'] = row[2]
+                args['result_cost'] = row[3]
                 if args['result_edge_id'] != -1:
                     query2 = """
                         SELECT ST_AsText(%(transform_s)s%(geometry)s%(transform_e)s) FROM %(edge_table)s
