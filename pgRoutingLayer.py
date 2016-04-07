@@ -545,6 +545,8 @@ class PgRoutingLayer:
             cur = con.cursor()
             cur.execute(query)
             rows = cur.fetchall()
+            if  len(rows) == 0:
+                QMessageBox.information(self.dock, self.dock.windowTitle(), 'No paths found in ' + self.getLayerName(args))
             
             args['srid'] = srid
             args['canvas_srid'] = Utils.getCanvasSrid(Utils.getDestinationCrs(self.iface.mapCanvas()))
