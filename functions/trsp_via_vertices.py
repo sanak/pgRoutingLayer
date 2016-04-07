@@ -32,7 +32,10 @@ class Function(FunctionBase):
     @classmethod
     def canExport(self):
         return True
-    
+
+    def isSupportedVersion(self, version):
+        return version >= 2.1 and version < 3.0
+
     def prepare(self, canvasItemList):
         resultPathsRubberBands = canvasItemList['paths']
         for path in resultPathsRubberBands:

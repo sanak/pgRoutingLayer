@@ -48,7 +48,10 @@ class Function(FunctionBase):
     @classmethod
     def canExport(self):
         return True
-    
+
+    def isSupportedVersion(self, version):
+        return version >= 2.0 and version < 3.0
+
     def prepare(self, canvasItemList):
         if self.version < 2.1:
             resultPathRubberBand = canvasItemList['path']
@@ -83,7 +86,7 @@ class Function(FunctionBase):
                         %(cost)s AS cost
                         %(reverse_cost)s
                         FROM %(edge_table)s',
-                    array[%(source_ids)s], array[%(target_ids)s], %(directed)s)""" % args
+                    array[%(source_ids)s]::BIGINT[], array[%(target_ids)s]::BIGINT[], %(directed)s)""" % args
 
     def getExportMergeQuery(self, args):
         if self.version < 2.1:

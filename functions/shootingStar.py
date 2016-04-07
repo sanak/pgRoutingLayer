@@ -39,6 +39,9 @@ class Function(FunctionBase):
     def canExport(self):
         return True
     
+    def isSupportedVersion(self, version):
+        return false;
+
     def prepare(self, canvasItemList):
         resultPathRubberBand = canvasItemList['path']
         resultPathRubberBand.reset(False)

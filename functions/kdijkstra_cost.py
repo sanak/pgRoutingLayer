@@ -34,6 +34,10 @@ class Function(FunctionBase):
     def canExport(self):
         return False
     
+    def isSupportedVersion(self, version):
+        return version >= 2.0 and version < 3.0
+
+    
     def prepare(self, canvasItemList):
         resultNodesTextAnnotations = canvasItemList['annotations']
         for anno in resultNodesTextAnnotations:

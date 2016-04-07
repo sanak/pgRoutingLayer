@@ -224,6 +224,23 @@ class PgRoutingLayer:
 
         self.updateConnectionEnabled()
 
+    def loadFunctionsForVersion(self):
+        currentText = str(self.dock.comboBoxFunction.currentText())
+        self.dock.comboBoxFunction.clear()
+
+        #for funcname, function in self.functions.items():
+        for funcname in sorted(self.functions):
+            function = self.functions[funcname]
+            Utils.logMessage("testing " + funcname + " = " + function.getName())
+            if (function.isSupportedVersion(self.version)):
+                self.dock.comboBoxFunction.addItem(function.getName())
+            else:
+                Utils.logMessage("bool =" + str(function.isSupportedVersion(self.version)))
+
+        idx = self.dock.comboBoxFunction.findText(currentText)
+        if idx >= 0:
+            self.dock.comboBoxFunction.setCurrentIndex(idx)
+
 
 
     def updateConnectionEnabled(self):
@@ -236,16 +253,13 @@ class PgRoutingLayer:
         currentFunction = self.dock.comboBoxFunction.currentText()
         if currentFunction =='':
             return
-        #idx = self.dock.comboBoxFunction.findText(currentFunction)
-        #if idx >= 0:
-        #    self.dock.comboBoxFunction.setCurrentIndex(idx)
-        #if fn =='':
-        #    fn = 'dijkstra'
-        #Utils.logMessage("Function " + str(fn))
+        self.loadFunctionsForVersion()
         self.updateFunctionEnabled(currentFunction)
 
 
     def updateFunctionEnabled(self, text):
+        if text == '':
+            return
         Utils.logMessage("FUNC " + text)
         function = self.functions[str(text)]
         

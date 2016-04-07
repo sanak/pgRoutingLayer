@@ -18,7 +18,7 @@ class FunctionBase(object):
         return False
 
     def isSupportedVersion(self, version):
-        return (self.minVersion <= version and version <= self.maxVersion)
+        pass
 
     def prepare(self, canvasItemList):
         pass
