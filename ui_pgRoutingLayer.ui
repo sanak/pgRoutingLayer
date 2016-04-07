@@ -778,6 +778,16 @@ _sql</string>
                  </property>
                 </widget>
                </item>
+               <item>
+                <widget class="QCheckBox" name="checkBoxHeapPaths">
+                 <property name="toolTip">
+                  <string>tick for algorithm heap paths</string>
+                 </property>
+                 <property name="text">
+                  <string>heap_paths</string>
+                 </property>
+                </widget>
+               </item>
               </layout>
              </item>
              <item row="1" column="0">
@@ -991,7 +1001,6 @@ _sql</string>
   <tabstop>buttonSelectTargetIds</tabstop>
   <tabstop>lineEditDistance</tabstop>
   <tabstop>lineEditPaths</tabstop>
-  <tabstop>checkBoxDirected</tabstop>
   <tabstop>plainTextEditTurnRestrictSql</tabstop>
   <tabstop>buttonRun</tabstop>
  </tabstops>

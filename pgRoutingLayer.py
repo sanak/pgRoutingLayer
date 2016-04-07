@@ -76,7 +76,7 @@ class PgRoutingLayer:
         'labelDistance', 'lineEditDistance',
         'labelAlpha', 'lineEditAlpha',
         'labelPaths', 'lineEditPaths',
-        'checkBoxDirected', 'checkBoxHasReverseCost',
+        'checkBoxDirected', 'checkBoxHasReverseCost', 'checkBoxHeapPaths',
         'labelTurnRestrictSql', 'plainTextEditTurnRestrictSql',
     ]
     FIND_RADIUS = 10
@@ -231,11 +231,8 @@ class PgRoutingLayer:
         #for funcname, function in self.functions.items():
         for funcname in sorted(self.functions):
             function = self.functions[funcname]
-            Utils.logMessage("testing " + funcname + " = " + function.getName())
             if (function.isSupportedVersion(self.version)):
                 self.dock.comboBoxFunction.addItem(function.getName())
-            else:
-                Utils.logMessage("bool =" + str(function.isSupportedVersion(self.version)))
 
         idx = self.dock.comboBoxFunction.findText(currentText)
         if idx >= 0:
@@ -260,7 +257,6 @@ class PgRoutingLayer:
     def updateFunctionEnabled(self, text):
         if text == '':
             return
-        Utils.logMessage("FUNC " + text)
         function = self.functions[str(text)]
         
         self.toggleSelectButton(None)
@@ -269,7 +265,6 @@ class PgRoutingLayer:
             control = getattr(self.dock, controlName)
             control.setVisible(False)
         
-        Utils.logMessage("update enabled version " + str(self.version))
         for controlName in function.getControlNames(self.version):
             control = getattr(self.dock, controlName)
             control.setVisible(True)
@@ -715,11 +710,12 @@ class PgRoutingLayer:
                 return
             
             withgetExportMergequery = [
-                    'dijkstra',
-                    'kdijkstra(path)',
-                    'bdDijkstra',
                     'astar',
                     'bdAstar',
+                    'bdDijkstra',
+                    'dijkstra',
+                    'ksp',
+                    'kdijkstra(path)',
                     'trsp(vertex)'
                     ]
             if function.getName() in withgetExportMergequery:
@@ -760,7 +756,7 @@ class PgRoutingLayer:
             uri.setDataSource("", "(" + query + ")", "path_geom", "", "seq")
             
             # add vector layer to map
-            layerName = "(M)" +  self.getLayerName(args)
+            layerName = "(M) " +  self.getLayerName(args)
             
             vl = self.iface.addVectorLayer(uri.uri(), layerName, db.getProviderName())
             
@@ -806,6 +802,12 @@ class PgRoutingLayer:
                 layerName += args['target_id']
             else:
                 layerName += args['target_ids']
+
+        if 'paths' in args:
+            layerName +=  " -  K = " + args['paths']
+            if 'heap_paths' in args and args['heap_paths'] == 'true':
+                layerName += '+'
+
         return layerName
             
 
@@ -934,6 +936,9 @@ class PgRoutingLayer:
         
         if 'checkBoxDirected' in controls:
             args['directed'] = str(self.dock.checkBoxDirected.isChecked()).lower()
+        
+        if 'checkBoxHeapPaths' in controls:
+            args['heap_paths'] = str(self.dock.checkBoxHeapPaths.isChecked()).lower()
         
         if 'checkBoxHasReverseCost' in controls:
             args['has_reverse_cost'] = str(self.dock.checkBoxHasReverseCost.isChecked()).lower()
@@ -1201,6 +1206,7 @@ class PgRoutingLayer:
         self.dock.lineEditAlpha.setText(Utils.getStringValue(settings, '/pgRoutingLayer/alpha', '0.0'))
         self.dock.lineEditPaths.setText(Utils.getStringValue(settings, '/pgRoutingLayer/paths', '2'))
         self.dock.checkBoxDirected.setChecked(Utils.getBoolValue(settings, '/pgRoutingLayer/directed', False))
+        self.dock.checkBoxHeapPaths.setChecked(Utils.getBoolValue(settings, '/pgRoutingLayer/heap_paths', False))
         self.dock.checkBoxHasReverseCost.setChecked(Utils.getBoolValue(settings, '/pgRoutingLayer/has_reverse_cost', False))
         self.dock.plainTextEditTurnRestrictSql.setPlainText(Utils.getStringValue(settings, '/pgRoutingLayer/turn_restrict_sql', 'null'))
         
@@ -1235,5 +1241,6 @@ class PgRoutingLayer:
         settings.setValue('/pgRoutingLayer/alpha', self.dock.lineEditAlpha.text())
         settings.setValue('/pgRoutingLayer/paths', self.dock.lineEditPaths.text())
         settings.setValue('/pgRoutingLayer/directed', self.dock.checkBoxDirected.isChecked())
+        settings.setValue('/pgRoutingLayer/heap_paths', self.dock.checkBoxHeapPaths.isChecked())
         settings.setValue('/pgRoutingLayer/has_reverse_cost', self.dock.checkBoxHasReverseCost.isChecked())
         settings.setValue('/pgRoutingLayer/turn_restrict_sql', self.dock.plainTextEditTurnRestrictSql.toPlainText())
