@@ -621,7 +621,7 @@ class PgRoutingLayer:
                     FROM %(edge_table)s_vertices_pgr JOIN result ON %(edge_table)s_vertices_pgr.%(id)s = result._node
                     """ % args
 
-                query = """WITH
+                msgQuery = """WITH
                     result AS ( %(result_query)s ),
                     with_geom AS ( %(with_geom_query)s )
                     SELECT seq, _node, _edge, _cost, x, y, path_geom
@@ -631,22 +631,19 @@ class PgRoutingLayer:
 
             else:
                 args['result_query'] = function.getQuery(args)
-                query = """
-                    SELECT 
-                        CASE WHEN result._node = %(edge_table)s.%(source)s THEN %(edge_table)s.%(geometry)s
-                        ELSE ST_Reverse(%(edge_table)s.%(geometry)s) END AS path_geom,
-                        result.*, %(edge_table)s.*
-                        FROM %(edge_table)s
-                        JOIN
-                        (%(result_query)s) AS result
-                        ON %(edge_table)s.%(id)s = result._edge ORDER BY result.seq""" % args
+                msgQuery = """
+SELECT 
+  CASE
+    WHEN result._node = %(edge_table)s.%(source)s
+      THEN %(edge_table)s.%(geometry)s
+    ELSE ST_Reverse(%(edge_table)s.%(geometry)s)
+  END AS path_geom,
+  result.*, %(edge_table)s.*
+FROM %(edge_table)s JOIN (%(result_query)s) AS result
+  ON %(edge_table)s.%(id)s = result._edge ORDER BY result.seq""" % args
             
-            query = query.replace('\n', ' ')
-            query = re.sub(r'\s+', ' ', query)
-            query = query.replace('( ', '(')
-            query = query.replace(' )', ')')
-            query = query.strip()
-            Utils.logMessage('Export:\n' + query)
+            query = self.cleanQuery(msgQuery)
+            Utils.logMessage('Export:\n' + msgQuery)
             
             uri = db.getURI()
             uri.setDataSource("", "(" + query + ")", "path_geom", "", "seq")
@@ -654,6 +651,10 @@ class PgRoutingLayer:
             layerName = self.getLayerName(args)
 
             vl = self.iface.addVectorLayer(uri.uri(), layerName, db.getProviderName())
+            if not vl:
+                QMessageBox.information(self.dock, self.dock.windowTitle(), 'Invalid Layer')
+                QMessageBox.information(self.dock, self.dock.windowTitle(), 'pgRouting Query:' + args['result_query'])
+                QMessageBox.information(self.dock, self.dock.windowTitle(), 'Geometry Query:' + msgQuery)
             
         except psycopg2.DatabaseError, e:
             QApplication.restoreOverrideCursor()
@@ -671,6 +672,14 @@ class PgRoutingLayer:
                 except:
                     QMessageBox.critical(self.dock, self.dock.windowTitle(),
                         'server closed the connection unexpectedly')
+
+    def cleanQuery(self, msgQuery):
+        query = msgQuery.replace('\n', ' ')
+        query = re.sub(r'\s+', ' ', query)
+        query = query.replace('( ', '(')
+        query = query.replace(' )', ')')
+        query = query.strip()
+        return query
 
                         
     def exportMerged(self):
@@ -721,7 +730,7 @@ class PgRoutingLayer:
                     'trsp(vertex)'
                     ]
             if function.getName() in withgetExportMergequery:
-                query = function.getExportMergeQuery(args)
+                msgQuery = function.getExportMergeQuery(args)
             else:
                 args['result_query'] = function.getQuery(args)
 
@@ -737,7 +746,7 @@ class PgRoutingLayer:
                     FROM result
                     """
 
-                query = """WITH
+                msgQuery = """WITH
                     result AS ( %(result_query)s ),
                     with_geom AS ( %(with_geom_query)s ),
                     aggregates AS ( %(aggregates_query)s )
@@ -747,11 +756,7 @@ class PgRoutingLayer:
                     FROM aggregates, with_geom 
                     """ % args
 
-            query = query.replace('\n', ' ')
-            query = re.sub(r'\s+', ' ', query)
-            query = query.replace('( ', '(')
-            query = query.replace(' )', ')')
-            query = query.strip()
+            query = self.cleanQuery(msgQuery)
             Utils.logMessage('Export merged:\n' + query)
             
             uri = db.getURI()
@@ -761,6 +766,10 @@ class PgRoutingLayer:
             layerName = "(M) " +  self.getLayerName(args)
             
             vl = self.iface.addVectorLayer(uri.uri(), layerName, db.getProviderName())
+            if not vl:
+                QMessageBox.information(self.dock, self.dock.windowTitle(), 'Invalid Layer:\n - No paths found or\n - Invalid geometries')
+                QMessageBox.information(self.dock, self.dock.windowTitle(), 'pgRouting Query:' + args['result_query'])
+                QMessageBox.information(self.dock, self.dock.windowTitle(), 'Geometry Query:' + msgQuery)
             
         except psycopg2.DatabaseError, e:
             QApplication.restoreOverrideCursor()
