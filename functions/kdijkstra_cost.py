@@ -34,6 +34,10 @@ class Function(FunctionBase):
     def canExport(self):
         return False
     
+    @classmethod
+    def canExportMerged(self):
+        return False
+    
     def isSupportedVersion(self, version):
         return version >= 2.0 and version < 3.0
 
@@ -54,6 +58,24 @@ class Function(FunctionBase):
                     FROM %(edge_table)s',
                 %(source_id)s, array[%(target_ids)s], %(directed)s, %(has_reverse_cost)s)""" % args
     
+    def getExportQuery(self, args):
+        args['result_query'] = self.getQuery(args)
+
+        query = """
+WITH
+result AS ( %(result_query)s )
+SELECT 
+  CASE
+    WHEN result._node = %(edge_table)s.%(source)s
+      THEN %(edge_table)s.%(geometry)s
+    ELSE ST_Reverse(%(edge_table)s.%(geometry)s)
+  END AS path_geom,
+  result.*, %(edge_table)s.*
+FROM %(edge_table)s JOIN result
+  ON %(edge_table)s.%(id)s = result._edge ORDER BY result.seq
+""" % args
+        return query
+
     def draw(self, rows, con, args, geomType, canvasItemList, mapCanvas):
         resultPathsRubberBands = canvasItemList['paths']
         rubberBand = None

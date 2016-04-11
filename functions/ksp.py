@@ -100,6 +100,24 @@ FROM pgr_ksp('
   %(source_id)s, %(target_id)s, %(paths)s,
   %(directed)s, %(heap_paths)s)""" % args
 
+    def getExportQuery(self, args):
+        args['result_query'] = self.getQuery(args)
+
+        query = """
+WITH
+result AS ( %(result_query)s )
+SELECT 
+  CASE
+    WHEN result._node = %(edge_table)s.%(source)s
+      THEN %(edge_table)s.%(geometry)s
+    ELSE ST_Reverse(%(edge_table)s.%(geometry)s)
+  END AS path_geom,
+  result.*, %(edge_table)s.*
+FROM %(edge_table)s JOIN result
+  ON %(edge_table)s.%(id)s = result._edge ORDER BY result.seq
+""" % args
+        return query
+
 
     def getExportMergeQuery(self, args):
         if self.version < 2.1:

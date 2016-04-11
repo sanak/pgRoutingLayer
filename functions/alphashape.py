@@ -31,8 +31,8 @@ class Function(FunctionBase):
         return False
     
     @classmethod
-    def canExport(self):
-        return True
+    def canExportMerged(self):
+        return False
     
     def isSupportedVersion(self, version):
         return version >= 2.0 and version < 3.0
@@ -42,25 +42,87 @@ class Function(FunctionBase):
         resultAreaRubberBand.reset(Utils.getRubberBandType(True))
 
     def getQuery(self, args):
-        if args['version'] > 2.0:
-            args['alpha'] = ', ' + str(args['alpha'])
-        else:
-            args['alpha'] = ''
-        return """
-            SELECT x, y FROM pgr_alphashape('
-                %(node_query)s
-                SELECT *
-                    FROM node
-                    JOIN
-                    (SELECT * FROM pgr_drivingDistance(''
-                        SELECT %(id)s::int4 AS id,
-                            %(source)s::int4 AS source,
-                            %(target)s::int4 AS target,
-                            %(cost)s::float8 AS cost%(reverse_cost)s
-                            FROM %(edge_table)s'',
-                        %(source_id)s, %(distance)s, %(directed)s, %(has_reverse_cost)s))
-                    AS dd ON node.id = dd.id1'::text%(alpha)s)""" % args
+        if args['version'] < 2.1:
+            return """
+SELECT x, y FROM pgr_alphashape($$
+WITH
+dd AS (
+  SELECT seq, id1 AS _node FROM pgr_drivingDistance('
+        SELECT %(id)s::int4 AS id,
+        %(source)s::int4 AS source,
+        %(target)s::int4 AS target,
+        %(cost)s::float8 AS cost%(reverse_cost)s
+        FROM %(edge_table)s
+        WHERE %(edge_table)s.%(geometry)s && %(BBOX)s',
+        %(source_id)s, %(distance)s,
+        %(directed)s, %(has_reverse_cost)s)
+),
+node AS (
+    SELECT dd.seq AS id,
+    ST_X(the_geom) AS x, ST_Y(the_geom) AS y
+    FROM %(edge_table)s_vertices_pgr JOIN dd
+    ON edge_table_vertices_pgr.id = dd._node
+)
+SELECT * FROM node$$::text)
+""" % args
     
+    # V21.+ has pgr_drivingDistance with big int
+    # and pgr_alphaShape has an alpha value
+        args['alpha'] = ', ' + str(args['alpha'])
+        return """
+SELECT x, y FROM pgr_alphashape($$
+WITH
+dd AS (
+  SELECT seq, node AS _node FROM pgr_drivingDistance('
+        SELECT %(id)s AS id,
+        %(source)s AS source,
+        %(target)s AS target,
+        %(cost)s AS cost%(reverse_cost)s
+        FROM %(edge_table)s
+        WHERE %(edge_table)s.%(geometry)s && %(BBOX)s',
+        %(source_id)s, %(distance)s,
+        %(directed)s)
+),
+node AS (
+    SELECT dd.seq AS id,
+    ST_X(the_geom) AS x, ST_Y(the_geom) AS y
+    FROM %(edge_table)s_vertices_pgr JOIN dd
+    ON edge_table_vertices_pgr.id = dd._node
+)
+SELECT * FROM node$$::text%(alpha)s)
+""" % args
+    
+
+
+    def getExportQuery(self, args):
+        if args['version'] < 2.1:
+            return """
+SELECT 1 AS seq, ST_SetSRID(pgr_pointsAsPolygon, 0) AS path_geom FROM pgr_pointsAsPolygon($$
+WITH
+dd AS (
+  SELECT seq, id1 AS _node FROM pgr_drivingDistance(''
+        SELECT %(id)s::int4 AS id,
+        %(source)s::int4 AS source,
+        %(target)s::int4 AS target,
+        %(cost)s::float8 AS cost%(reverse_cost)s
+        FROM %(edge_table)s
+        WHERE %(edge_table)s.%(geometry)s && %(BBOX)s'',
+        %(source_id)s, %(distance)s,
+        %(directed)s, %(has_reverse_cost)s)
+),
+node AS (
+    SELECT dd.seq AS id,
+    ST_X(the_geom) AS x, ST_Y(the_geom) AS y
+    FROM %(edge_table)s_vertices_pgr JOIN dd
+    ON edge_table_vertices_pgr.id = dd._node
+)
+SELECT * FROM node$$::text%(alpha)s)
+""" % args
+
+
+
+
+
     def draw(self, rows, con, args, geomType, canvasItemList, mapCanvas):
         resultAreaRubberBand = canvasItemList['area']
         trans = None

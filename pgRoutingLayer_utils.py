@@ -5,6 +5,21 @@ from qgis.gui import *
 import psycopg2
 import sip
 
+
+def getSridAndGeomType(con, table, geometry):
+    args = {}
+    args['table'] = table
+    args['geometry'] = geometry
+    cur = con.cursor()
+    cur.execute("""
+        SELECT ST_SRID(%(geometry)s), ST_GeometryType(%(geometry)s)
+            FROM %(table)s 
+            LIMIT 1
+    """ % args)
+    row = cur.fetchone()
+    return row[0], row[1]
+
+
 def setStartPoint(geomType, args):
     if geomType == 'ST_MultiLineString':
         args['startpoint'] = "ST_StartPoint(ST_GeometryN(%(geometry)s, 1))" % args
@@ -17,8 +32,8 @@ def setEndPoint(geomType, args):
     elif geomType == 'ST_LineString':
         args['endpoint'] = "ST_EndPoint(%(geometry)s)" % args
 
-def setTransformQuotes(args):
-    if args['srid'] > 0 and args['canvas_srid'] > 0:
+def setTransformQuotes(args, srid, canvas_srid):
+    if srid > 0 and canvas_srid > 0:
         args['transform_s'] = "ST_Transform("
         args['transform_e'] = ", %(canvas_srid)d)" % args
     else:
@@ -103,8 +118,18 @@ def getNodeQuery(args, geomType):
         )""" % args
 
 def getPgrVersion(con):
-    cur = con.cursor()
-    cur.execute('SELECT version FROM pgr_version()')
-    versions = cur.fetchone()[0].split('.')
-    version = int(versions[0]) + (float(versions[1]) / 10.0)
-    return version
+    try:
+        cur = con.cursor()
+        cur.execute('SELECT version FROM pgr_version()')
+        row = cur.fetchone()[0]
+        versions =  ''.join([i for i in row if i.isdigit()])
+        version = versions[0]
+        if versions[1]:
+            version += '.' + versions[1]
+        return float(version)
+    except psycopg2.DatabaseError, e:
+        #database didn't have pgrouting
+        return 0;
+    except SystemError, e:
+        return 0
+

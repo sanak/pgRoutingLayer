@@ -13,9 +13,15 @@ class FunctionBase(object):
     def isEdgeBase(self):
         return False
     
+    # the mayority of the functions can Export
     @classmethod
     def canExport(self):
-        return False
+        return True
+
+    # the mayority of the functions can ExportMerged
+    @classmethod
+    def canExportMerged(self):
+        return True
 
     def isSupportedVersion(self, version):
         pass
@@ -26,6 +32,9 @@ class FunctionBase(object):
     def getQuery(self, args):
         return ''
     
+    def getExportQuery(self, args):
+        return ''
+
     def getExportMergeQuery(self, args):
         return ''
     

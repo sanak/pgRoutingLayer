@@ -66,27 +66,50 @@ class Function(FunctionBase):
     def getQuery(self, args):
         if self.version < 2.1:
             return """
-                SELECT seq, 
-                    id1 AS _node, id2 AS _edge, cost AS _cost FROM pgr_dijkstra('
-                    SELECT %(id)s::int4 AS id,
-                        %(source)s::int4 AS source,
-                        %(target)s::int4 AS target,
-                        %(cost)s::float8 AS cost
-                        %(reverse_cost)s
-                        FROM %(edge_table)s',
-                    %(source_id)s, %(target_id)s, %(directed)s, %(has_reverse_cost)s)""" % args
+SELECT seq, 
+  id1 AS _node, id2 AS _edge, cost AS _cost FROM pgr_dijkstra('
+  SELECT %(id)s::int4 AS id,
+    %(source)s::int4 AS source,
+    %(target)s::int4 AS target,
+    %(cost)s::float8 AS cost
+    %(reverse_cost)s
+    FROM %(edge_table)s
+    WHERE %(edge_table)s.%(geometry)s && %(BBOX)s',
+  %(source_id)s, %(target_id)s, %(directed)s, %(has_reverse_cost)s)
+""" % args
         else:
             return """
-                SELECT seq, '(' || start_vid || ',' || end_vid || ')' AS path_name,
-                    path_seq AS _path_seq, start_vid AS _start_vid, end_vid AS _end_vid,
-                    node AS _node, edge AS _edge, cost AS _cost, lead(agg_cost) over() AS _agg_cost FROM pgr_dijkstra('
-                    SELECT %(id)s AS id,
-                        %(source)s AS source,
-                        %(target)s AS target,
-                        %(cost)s AS cost
-                        %(reverse_cost)s
-                        FROM %(edge_table)s',
-                    array[%(source_ids)s]::BIGINT[], array[%(target_ids)s]::BIGINT[], %(directed)s)""" % args
+SELECT seq, '(' || start_vid || ',' || end_vid || ')' AS path_name,
+  path_seq AS _path_seq, start_vid AS _start_vid, end_vid AS _end_vid,
+  node AS _node, edge AS _edge, cost AS _cost, lead(agg_cost) over() AS _agg_cost FROM pgr_dijkstra('
+  SELECT %(id)s AS id,
+    %(source)s AS source,
+    %(target)s AS target,
+    %(cost)s AS cost
+    %(reverse_cost)s
+    FROM %(edge_table)s
+    WHERE %(edge_table)s.%(geometry)s && %(BBOX)s',
+  array[%(source_ids)s]::BIGINT[], array[%(target_ids)s]::BIGINT[], %(directed)s)
+""" % args
+
+    def getExportQuery(self, args):
+        args['result_query'] = self.getQuery(args)
+
+        query = """
+WITH
+result AS ( %(result_query)s )
+SELECT 
+  CASE
+    WHEN result._node = %(edge_table)s.%(source)s
+      THEN %(edge_table)s.%(geometry)s
+    ELSE ST_Reverse(%(edge_table)s.%(geometry)s)
+  END AS path_geom,
+  result.*, %(edge_table)s.*
+FROM %(edge_table)s JOIN result
+  ON %(edge_table)s.%(id)s = result._edge ORDER BY result.seq
+""" % args
+        return query
+
 
     def getExportMergeQuery(self, args):
         if self.version < 2.1:

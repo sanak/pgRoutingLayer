@@ -215,14 +215,39 @@ class PgRoutingLayer:
         self.actionsDb = {}
         for a in actions:
             self.actionsDb[ unicode(a.text()) ] = a
-        for i in self.actionsDb:
-            self.dock.comboConnections.addItem(i)
+
+        for dbname in self.actionsDb:
+            try:
+                db = self.actionsDb[dbname].connect()
+                con = db.con
+                version = Utils.getPgrVersion(con)
+                if (Utils.getPgrVersion(con) != 0):
+                    self.dock.comboConnections.addItem(dbname)
+            finally:
+                if db and db.con:
+                    db.con.close()
 
         idx = self.dock.comboConnections.findText(currentText)
         if idx >= 0:
             self.dock.comboConnections.setCurrentIndex(idx)
-
+        else:
+            self.dock.comboConnections.setCurrentIndex(0)
         self.updateConnectionEnabled()
+
+
+
+    def updateConnectionEnabled(self):
+        dbname = str(self.dock.comboConnections.currentText())
+        db = self.actionsDb[dbname].connect()
+        con = db.con
+        Utils.logMessage("dbname " + dbname)
+        self.version = Utils.getPgrVersion(con)
+        Utils.logMessage("update connection version " + str(self.version))
+        currentFunction = self.dock.comboBoxFunction.currentText()
+        if currentFunction =='':
+            return
+        self.loadFunctionsForVersion()
+        self.updateFunctionEnabled(currentFunction)
 
     def loadFunctionsForVersion(self):
         currentText = str(self.dock.comboBoxFunction.currentText())
@@ -238,20 +263,6 @@ class PgRoutingLayer:
         if idx >= 0:
             self.dock.comboBoxFunction.setCurrentIndex(idx)
 
-
-
-    def updateConnectionEnabled(self):
-        dados = str(self.dock.comboConnections.currentText())
-        db = self.actionsDb[dados].connect()
-        con = db.con
-        self.version = Utils.getPgrVersion(con)
-        Utils.logMessage("dados " + dados)
-        Utils.logMessage("update connection version " + str(self.version))
-        currentFunction = self.dock.comboBoxFunction.currentText()
-        if currentFunction =='':
-            return
-        self.loadFunctionsForVersion()
-        self.updateFunctionEnabled(currentFunction)
 
 
     def updateFunctionEnabled(self, text):
@@ -284,7 +295,8 @@ class PgRoutingLayer:
 
         canExport = function.canExport()
         self.dock.buttonExport.setEnabled(canExport)
-        self.dock.buttonExportMerged.setEnabled(canExport)
+        canExportMerged = function.canExportMerged()
+        self.dock.buttonExportMerged.setEnabled(canExportMerged)
    
     def selectIds(self, checked):
         if checked:
@@ -503,6 +515,7 @@ class PgRoutingLayer:
             self.dock.lineEditReverseCost.setEnabled(False)
         
     def run(self):
+        """ Draws a Preview on the canvas"""
         QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
         
         function = self.functions[str(self.dock.comboBoxFunction.currentText())]
@@ -520,8 +533,8 @@ class PgRoutingLayer:
             return
         
         try:
-            dados = str(self.dock.comboConnections.currentText())
-            db = self.actionsDb[dados].connect()
+            dbname = str(self.dock.comboConnections.currentText())
+            db = self.actionsDb[dbname].connect()
             
             con = db.con
             
@@ -533,14 +546,18 @@ class PgRoutingLayer:
                 return
             args['version'] = version
             
-            srid, geomType = self.getSridAndGeomType(con, args)
-            if (function.getName() == 'alphashape') or (function.getName() == 'tsp(euclid)'):
+            #srid, geomType = self.getSridAndGeomType(con, args)
+            srid, geomType = Utils.getSridAndGeomType(con, args['edge_table'], args['geometry'])
+            if (function.getName() == 'tsp(euclid)'):
                 args['node_query'] = Utils.getNodeQuery(args, geomType)
             
             function.prepare(self.canvasItemList)
             
+            args['BBOX'], args['printBBOX'] = self.getBBOX() 
             query = function.getQuery(args)
-            Utils.logMessage('Run:' + query)
+           
+            QMessageBox.information(self.dock, self.dock.windowTitle(), 'Run Query:' + query)
+
             
             cur = con.cursor()
             cur.execute(query)
@@ -550,7 +567,7 @@ class PgRoutingLayer:
             
             args['srid'] = srid
             args['canvas_srid'] = Utils.getCanvasSrid(Utils.getDestinationCrs(self.iface.mapCanvas()))
-            Utils.setTransformQuotes(args)
+            Utils.setTransformQuotes(args, srid, args['canvas_srid'])
             function.draw(rows, con, args, geomType, self.canvasItemList, self.iface.mapCanvas())
             
         except psycopg2.DatabaseError, e:
@@ -592,8 +609,8 @@ class PgRoutingLayer:
             return
         
         try:
-            dados = str(self.dock.comboConnections.currentText())
-            db = self.actionsDb[dados].connect()
+            dbname = str(self.dock.comboConnections.currentText())
+            db = self.actionsDb[dbname].connect()
             
             con = db.con
             
@@ -606,41 +623,11 @@ class PgRoutingLayer:
             args['version'] = version
             
             query = ""
-            srid, geomType = self.getSridAndGeomType(con, args)
-            if function.getName() == 'alphashape':
-                args['node_query'] = Utils.getNodeQuery(args, geomType)
-                args['srid'] = srid
-                query = function.getQuery(args)
-                query = query.replace('SELECT x, y FROM pgr_alphashape(',
-                                      'SELECT 1 AS seq, ST_SetSRID(pgr_pointsAsPolygon, %(srid)d) AS path_geom FROM pgr_pointsAsPolygon(' % args)
-                query = query.replace("''", "''''")
-            elif function.getName() == 'drivingDistance':
-                args['result_query'] = function.getQuery(args)
+            srid, geomType = Utils.getSridAndGeomType(con, 'edge_table', '%(geometry)s' % args)
 
-                args['with_geom_query'] = """SELECT result.seq AS seq, ST_X(the_geom) AS x, ST_Y(the_geom) AS y, the_geom AS path_geom
-                    FROM %(edge_table)s_vertices_pgr JOIN result ON %(edge_table)s_vertices_pgr.%(id)s = result._node
-                    """ % args
-
-                msgQuery = """WITH
-                    result AS ( %(result_query)s ),
-                    with_geom AS ( %(with_geom_query)s )
-                    SELECT seq, _node, _edge, _cost, x, y, path_geom
-                    FROM result JOIN with_geom 
-                    USING (seq)
-                    ORDER BY result.seq""" % args
-
-            else:
-                args['result_query'] = function.getQuery(args)
-                msgQuery = """
-SELECT 
-  CASE
-    WHEN result._node = %(edge_table)s.%(source)s
-      THEN %(edge_table)s.%(geometry)s
-    ELSE ST_Reverse(%(edge_table)s.%(geometry)s)
-  END AS path_geom,
-  result.*, %(edge_table)s.*
-FROM %(edge_table)s JOIN (%(result_query)s) AS result
-  ON %(edge_table)s.%(id)s = result._edge ORDER BY result.seq""" % args
+            args['BBOX'], args['printBBOX'] = self.getBBOX() 
+            #get the EXPORT query
+            msgQuery = function.getExportQuery(args)
             
             query = self.cleanQuery(msgQuery)
             Utils.logMessage('Export:\n' + msgQuery)
@@ -652,8 +639,8 @@ FROM %(edge_table)s JOIN (%(result_query)s) AS result
 
             vl = self.iface.addVectorLayer(uri.uri(), layerName, db.getProviderName())
             if not vl:
-                QMessageBox.information(self.dock, self.dock.windowTitle(), 'Invalid Layer')
-                QMessageBox.information(self.dock, self.dock.windowTitle(), 'pgRouting Query:' + args['result_query'])
+                QMessageBox.information(self.dock, self.dock.windowTitle(), 'Invalid Layer:\n - No paths found or\n - Invalid geometries')
+                QMessageBox.information(self.dock, self.dock.windowTitle(), 'pgRouting Query:' + function.getQuery(args))
                 QMessageBox.information(self.dock, self.dock.windowTitle(), 'Geometry Query:' + msgQuery)
             
         except psycopg2.DatabaseError, e:
@@ -681,6 +668,23 @@ FROM %(edge_table)s JOIN (%(result_query)s) AS result
         query = query.strip()
         return query
 
+    def getBBOX(self):
+        """ Returns the (Ready to use in query BBOX , print BBOX) """
+        bbox = {}
+        bbox['xMin'] = self.iface.mapCanvas().extent().xMinimum()
+        bbox['yMin'] = self.iface.mapCanvas().extent().yMinimum()
+        bbox['xMax'] = self.iface.mapCanvas().extent().xMaximum()
+        bbox['yMax'] = self.iface.mapCanvas().extent().yMaximum()
+        text = "BBOX(" + str(round(bbox['xMin'],2))
+        text += " " + str(round(bbox['yMin'],2))
+        text += "," + str(round(bbox['xMax'],2))
+        text += " " + str(round(bbox['yMax'],2)) + ")"
+        return """
+            ST_ENVELOPE(''LINESTRING( 
+             %(xMin)s %(yMin)s, 
+             %(xMax)s %(yMax)s )''::geometry)
+        """ % bbox, text
+    
                         
     def exportMerged(self):
         QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
@@ -700,8 +704,8 @@ FROM %(edge_table)s JOIN (%(result_query)s) AS result
             return
         
         try:
-            dados = str(self.dock.comboConnections.currentText())
-            db = self.actionsDb[dados].connect()
+            dbname = str(self.dock.comboConnections.currentText())
+            db = self.actionsDb[dbname].connect()
             
             con = db.con
             
@@ -713,23 +717,18 @@ FROM %(edge_table)s JOIN (%(result_query)s) AS result
                 return
             args['version'] = version
             
-            unsupportedFunctionNames = ['alphashape', 'drivingDistance']
-            if function.getName() in unsupportedFunctionNames:
-                QApplication.restoreOverrideCursor()
-                QMessageBox.warning(self.dock, self.dock.windowTitle(),
-                    'Exporting merged %s is not supported' % '/'.join(unsupportedFunctionNames))
-                return
-            
             withgetExportMergequery = [
                     'astar',
                     'bdAstar',
                     'bdDijkstra',
                     'dijkstra',
+                    'drivingDistance',
                     'ksp',
                     'kdijkstra(path)',
                     'trsp(vertex)'
                     ]
             if function.getName() in withgetExportMergequery:
+                args['BBOX'], args['printBBOX'] = self.getBBOX() 
                 msgQuery = function.getExportMergeQuery(args)
             else:
                 args['result_query'] = function.getQuery(args)
@@ -763,11 +762,20 @@ FROM %(edge_table)s JOIN (%(result_query)s) AS result
             uri.setDataSource("", "(" + query + ")", "path_geom", "", "seq")
             
             # add vector layer to map
-            layerName = "(M) " +  self.getLayerName(args)
+            layerName = self.getLayerName(args, 'M')
             
             vl = self.iface.addVectorLayer(uri.uri(), layerName, db.getProviderName())
             if not vl:
+
+                bigIntFunctions = [
+                    'dijkstra',
+                    'drivingDistance',
+                    'ksp',
+                    'alphaShape'
+                ]
                 QMessageBox.information(self.dock, self.dock.windowTitle(), 'Invalid Layer:\n - No paths found or\n - Invalid geometries')
+                QMessageBox.information(self.dock, self.dock.windowTitle(),
+                        'Invalid Layer:\n - No paths found or\n - Invalid geometries or\n - Could not convert BIGINT identifiers to INT')
                 QMessageBox.information(self.dock, self.dock.windowTitle(), 'pgRouting Query:' + args['result_query'])
                 QMessageBox.information(self.dock, self.dock.windowTitle(), 'Geometry Query:' + msgQuery)
             
@@ -788,36 +796,42 @@ FROM %(edge_table)s JOIN (%(result_query)s) AS result
                     QMessageBox.critical(self.dock, self.dock.windowTitle(),
                         'server closed the connection unexpectedly')
         
-    def getLayerName(self, args):
+    def getLayerName(self, args, letter=''):
         function = self.functions[str(self.dock.comboBoxFunction.currentText())]
-        layerName = function.getName() 
+
+        layerName = "(" + letter 
+
         if 'directed' in args and args['directed'] == 'true':
-            layerName +=  " (D) "
+            layerName +=  "D): "
         else:
-            layerName +=  " (U) "
+            layerName +=  "U): "
+
+        layerName += function.getName()
+
 
         if 'source_id' in args:
-            layerName +=  " - from " + args['source_id']
+            layerName +=  args['source_id']
         elif 'ids' in args:
-            layerName += " - Via " + args['ids']
+            layerName += "{" + args['ids'] + "}"
         else:
-            layerName +=  " - from " + args['source_ids']
+            layerName +=  "[" + args['source_ids'] + "]"
 
         if 'ids' in args:
             layerName += " "
         elif 'distance' in args:
-            layerName += " distance " + args['distance']
+            layerName += " dd = " + args['distance']
         else:
-            layerName += " to "
+            layerName += "->"
             if 'target_id' in args:
                 layerName += args['target_id']
             else:
-                layerName += args['target_ids']
+                layerName += "[" + args['target_ids'] + "]"
 
         if 'paths' in args:
             layerName +=  " -  K = " + args['paths']
             if 'heap_paths' in args and args['heap_paths'] == 'true':
                 layerName += '+'
+        layerName += " " +  args['printBBOX']
 
         return layerName
             
@@ -825,28 +839,28 @@ FROM %(edge_table)s JOIN (%(result_query)s) AS result
 
 
     def clear(self):
-        self.dock.lineEditIds.setText("")
+        #self.dock.lineEditIds.setText("")
         for marker in self.idsVertexMarkers:
             marker.setVisible(False)
         self.idsVertexMarkers = []
 
-        self.dock.lineEditSourceIds.setText("")
+        #self.dock.lineEditSourceIds.setText("")
         for marker in self.sourceIdsVertexMarkers:
             marker.setVisible(False)
         self.sourceIdsVertexMarkers = []
 
-        self.dock.lineEditTargetIds.setText("")
+        #self.dock.lineEditTargetIds.setText("")
         for marker in self.targetIdsVertexMarkers:
             marker.setVisible(False)
         self.targetIdsVertexMarkers = []
 
-        self.dock.lineEditPcts.setText("")
-        self.dock.lineEditSourceId.setText("")
+        #self.dock.lineEditPcts.setText("")
+        #self.dock.lineEditSourceId.setText("")
         self.sourceIdVertexMarker.setVisible(False)
-        self.dock.lineEditSourcePos.setText("0.5")
-        self.dock.lineEditTargetId.setText("")
+        #self.dock.lineEditSourcePos.setText("0.5")
+        #self.dock.lineEditTargetId.setText("")
         self.targetIdVertexMarker.setVisible(False)
-        self.dock.lineEditTargetPos.setText("0.5")
+        #self.dock.lineEditTargetPos.setText("0.5")
         for rubberBand in self.idsRubberBands:
             rubberBand.reset(Utils.getRubberBandType(False))
         self.idsRubberBands = []
@@ -984,16 +998,6 @@ FROM %(edge_table)s JOIN (%(result_query)s) AS result
         
         return args
         
-    def getSridAndGeomType(self, con, args):
-        cur = con.cursor()
-        cur.execute("""
-            SELECT ST_SRID(%(geometry)s), ST_GeometryType(%(geometry)s)
-                FROM %(edge_table)s
-                WHERE %(id)s = (SELECT MIN(%(id)s) FROM %(edge_table)s)""" % args)
-        row = cur.fetchone()
-        srid = row[0]
-        geomType = row[1]
-        return srid, geomType
         
     # emulate "matching.sql" - "find_nearest_node_within_distance"
     def findNearestNode(self, args, pt):
@@ -1002,11 +1006,12 @@ FROM %(edge_table)s JOIN (%(result_query)s) AS result
         canvasCrs = Utils.getDestinationCrs(self.iface.mapCanvas())
         db = None
         try:
-            dados = str(self.dock.comboConnections.currentText())
-            db = self.actionsDb[dados].connect()
+            dbname = str(self.dock.comboConnections.currentText())
+            db = self.actionsDb[dbname].connect()
             
             con = db.con
-            srid, geomType = self.getSridAndGeomType(con, args)
+            #srid, geomType = self.getSridAndGeomType(con, args)
+            srid, geomType = Utils.getSridAndGeomType(con, args['edge_table'], args['geometry'])
             if self.iface.mapCanvas().hasCrsTransformEnabled():
                 layerCrs = QgsCoordinateReferenceSystem()
                 Utils.createFromSrid(layerCrs, srid)
@@ -1025,7 +1030,8 @@ FROM %(edge_table)s JOIN (%(result_query)s) AS result
             
             Utils.setStartPoint(geomType, args)
             Utils.setEndPoint(geomType, args)
-            Utils.setTransformQuotes(args)
+            #Utils.setTransformQuotes(args)
+            Utils.setTransformQuotes(args, srid, args['canvas_srid'])
             
             # Getting nearest source
             query1 = """
@@ -1120,12 +1126,13 @@ FROM %(edge_table)s JOIN (%(result_query)s) AS result
         rect = QgsRectangle(pt.x() - distance, pt.y() - distance, pt.x() + distance, pt.y() + distance)
         canvasCrs = Utils.getDestinationCrs(self.iface.mapCanvas())
         try:
-            dados = str(self.dock.comboConnections.currentText())
-            db = self.actionsDb[dados].connect()
+            dbname = str(self.dock.comboConnections.currentText())
+            db = self.actionsDb[dbname].connect()
             
             con = db.con
             cur = con.cursor()
-            srid, geomType = self.getSridAndGeomType(con, args)
+            #srid, geomType = self.getSridAndGeomType(con, args)
+            srid, geomType = Utils.getSridAndGeomType(con, 'edge_table', '%(geometry)s' % args)
             if self.iface.mapCanvas().hasCrsTransformEnabled():
                 layerCrs = QgsCoordinateReferenceSystem()
                 Utils.createFromSrid(layerCrs, srid)
@@ -1143,7 +1150,8 @@ FROM %(edge_table)s JOIN (%(result_query)s) AS result
             args['maxy'] = rect.yMaximum()
             args['decimal_places'] = self.FRACTION_DECIMAL_PLACES
             
-            Utils.setTransformQuotes(args)
+            #Utils.setTransformQuotes(args)
+            Utils.setTransformQuotes(args, srid, args['canvas_srid'])
             
             # Searching for a link within the distance
             query = """

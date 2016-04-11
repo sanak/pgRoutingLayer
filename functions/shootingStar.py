@@ -48,20 +48,39 @@ class Function(FunctionBase):
     
     def getQuery(self, args):
         return """
-            SELECT seq, id1 AS node, id2 AS edge, cost FROM pgr_shootingStar('
-                SELECT %(id)s AS id,
-                    %(source)s::int4 AS source,
-                    %(target)s::int4 AS target,
-                    %(cost)s::float8 AS cost%(reverse_cost)s,
-                    %(x1)s::float8 AS x1,
-                    %(y1)s::float8 AS y1,
-                    %(x2)s::float8 AS x2,
-                    %(y2)s::float8 AS y2,
-                    %(rule)s::text AS rule,
-                    %(to_cost)s::float8
-                    FROM %(edge_table)s',
-                %(source_id)s, %(target_id)s, %(directed)s, %(has_reverse_cost)s)""" % args
+SELECT seq, id1 AS node, id2 AS edge, cost FROM pgr_shootingStar('
+  SELECT %(id)s AS id,
+    %(source)s::int4 AS source,
+    %(target)s::int4 AS target,
+    %(cost)s::float8 AS cost%(reverse_cost)s,
+    %(x1)s::float8 AS x1,
+    %(y1)s::float8 AS y1,
+    %(x2)s::float8 AS x2,
+    %(y2)s::float8 AS y2,
+    %(rule)s::text AS rule,
+    %(to_cost)s::float8
+  FROM %(edge_table)s',
+  %(source_id)s, %(target_id)s, %(directed)s, %(has_reverse_cost)s)
+""" % args
     
+    def getExportQuery(self, args):
+        args['result_query'] = self.getQuery(args)
+
+        query = """
+WITH
+result AS ( %(result_query)s )
+SELECT 
+  CASE
+    WHEN result._node = %(edge_table)s.%(source)s
+      THEN %(edge_table)s.%(geometry)s
+    ELSE ST_Reverse(%(edge_table)s.%(geometry)s)
+  END AS path_geom,
+  result.*, %(edge_table)s.*
+FROM %(edge_table)s JOIN result
+  ON %(edge_table)s.%(id)s = result._edge ORDER BY result.seq
+""" % args
+        return query
+
     def draw(self, rows, con, args, geomType, canvasItemList, mapCanvas):
         resultPathRubberBand = canvasItemList['path']
         for row in rows:
