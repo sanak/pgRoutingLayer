@@ -111,14 +111,36 @@ dd AS (
         %(directed)s, %(has_reverse_cost)s)
 ),
 node AS (
-    SELECT dd.seq AS id,
+    SELECT dd.seq::int4 AS id,
     ST_X(the_geom) AS x, ST_Y(the_geom) AS y
     FROM %(edge_table)s_vertices_pgr JOIN dd
     ON edge_table_vertices_pgr.id = dd._node
 )
-SELECT * FROM node$$::text%(alpha)s)
+SELECT * FROM node$$::text)
 """ % args
 
+        return """
+SELECT 1 AS seq, ST_SetSRID(pgr_pointsAsPolygon, 0) AS path_geom FROM pgr_pointsAsPolygon($$
+WITH
+dd AS (
+  SELECT seq, node AS _node FROM pgr_drivingDistance(''
+        SELECT %(id)s AS id,
+        %(source)s AS source,
+        %(target)s AS target,
+        %(cost)s AS cost%(reverse_cost)s
+        FROM %(edge_table)s
+        WHERE %(edge_table)s.%(geometry)s && %(BBOX)s'',
+        %(source_id)s, %(distance)s,
+        %(directed)s)
+),
+node AS (
+    SELECT dd.seq::int4 AS id,
+    ST_X(the_geom) AS x, ST_Y(the_geom) AS y
+    FROM %(edge_table)s_vertices_pgr JOIN dd
+    ON edge_table_vertices_pgr.id = dd._node
+)
+SELECT * FROM node$$::text)
+""" % args
 
 
 

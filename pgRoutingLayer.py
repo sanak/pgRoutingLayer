@@ -615,11 +615,11 @@ class PgRoutingLayer:
             con = db.con
             
             version = Utils.getPgrVersion(con)
-            if not function.isSupportedVersion(version):
-                QApplication.restoreOverrideCursor()
-                QMessageBox.warning(self.dock, self.dock.windowTitle(),
-                    'This function is not supported in pgRouting ver' + str(version))
-                return
+            #if not function.isSupportedVersion(version):
+            #    QApplication.restoreOverrideCursor()
+            #    QMessageBox.warning(self.dock, self.dock.windowTitle(),
+            #        'This function is not supported in pgRouting ver' + str(version))
+            #    return
             args['version'] = version
             
             query = ""
@@ -680,9 +680,10 @@ class PgRoutingLayer:
         text += "," + str(round(bbox['xMax'],2))
         text += " " + str(round(bbox['yMax'],2)) + ")"
         return """
-            ST_ENVELOPE(''LINESTRING( 
-             %(xMin)s %(yMin)s, 
-             %(xMax)s %(yMax)s )''::geometry)
+            ST_Envelope(ST_MakeLine( array[
+              St_MakePoint(%(xMin)s, %(yMin)s),
+              St_MakePoint(%(xMax)s, %(yMax)s)]
+              ))
         """ % bbox, text
     
                         
