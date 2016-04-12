@@ -9,6 +9,7 @@ class FunctionBase(object):
     def getControlNames(self, version):
         return [ '' ]
     
+    #The following contain the mayority of the functionality has:
     @classmethod
     def isEdgeBase(self):
         return False
@@ -23,8 +24,9 @@ class FunctionBase(object):
     def canExportMerged(self):
         return True
 
+    @classmethod
     def isSupportedVersion(self, version):
-        pass
+        return version >= 2.0 and version < 3.0
 
     def prepare(self, canvasItemList):
         pass

@@ -58,56 +58,54 @@ class Function(FunctionBase):
     def getQuery(self, args):
         if (args['version'] < 2.1):
             return """
-SELECT seq, id1 AS _node, id2 AS _edge, cost AS _cost
-FROM pgr_drivingDistance('
-  SELECT %(id)s::int4 AS id,
-    %(source)s::int4 AS source,
-    %(target)s::int4 AS target,
-    %(cost)s::float8 AS cost%(reverse_cost)s
-  FROM %(edge_table)s
-  WHERE %(edge_table)s.%(geometry)s && %(BBOX)s',
-  %(source_id)s, %(distance)s,
-  %(directed)s, %(has_reverse_cost)s)""" % args
+                SELECT seq, id1 AS _node, id2 AS _edge, cost AS _cost
+                FROM pgr_drivingDistance('
+                  SELECT %(id)s::int4 AS id,
+                    %(source)s::int4 AS source,
+                    %(target)s::int4 AS target,
+                    %(cost)s::float8 AS cost%(reverse_cost)s
+                  FROM %(edge_table)s
+                  WHERE %(edge_table)s.%(geometry)s && %(BBOX)s',
+                  %(source_id)s, %(distance)s,
+                  %(directed)s, %(has_reverse_cost)s)""" % args
 
         #2.1 or greater
         #TODO add equicost flag to gui
         return """
-SELECT seq, '(' || from_v || ', %(distance)s)' AS path_name,
-    from_v AS _from_v,
-    node AS _node, edge AS _edge,
-    cost AS _cost, agg_cost as _agg_cost
-FROM pgr_drivingDistance('
-  SELECT %(id)s AS id,
-    %(source)s AS source,
-    %(target)s AS target,
-    %(cost)s AS cost%(reverse_cost)s
-  FROM %(edge_table)s
-  WHERE %(edge_table)s.%(geometry)s && %(BBOX)s',
-  ARRAY[%(source_ids)s]::BIGINT[], %(distance)s,
-  %(directed)s, false)
-""" % args
+                SELECT seq, '(' || from_v || ', %(distance)s)' AS path_name,
+                    from_v AS _from_v,
+                    node AS _node, edge AS _edge,
+                    cost AS _cost, agg_cost as _agg_cost
+                FROM pgr_drivingDistance('
+                  SELECT %(id)s AS id,
+                    %(source)s AS source,
+                    %(target)s AS target,
+                    %(cost)s AS cost%(reverse_cost)s
+                  FROM %(edge_table)s
+                  WHERE %(edge_table)s.%(geometry)s && %(BBOX)s',
+                  ARRAY[%(source_ids)s]::BIGINT[], %(distance)s,
+                  %(directed)s, false)
+                """ % args
 
     def getExportQuery(self, args):
         args['result_query'] = self.getQuery(args)
 
         args['with_geom_query'] = """
-SELECT result.*,
-   ST_X(the_geom) AS x, ST_Y(the_geom) AS y,
-   the_geom AS path_geom
-FROM %(edge_table)s_vertices_pgr JOIN result
-ON %(edge_table)s_vertices_pgr.%(id)s = result._node
-""" % args
+            SELECT result.*,
+               ST_X(the_geom) AS x, ST_Y(the_geom) AS y,
+               the_geom AS path_geom
+            FROM %(edge_table)s_vertices_pgr JOIN result
+            ON %(edge_table)s_vertices_pgr.%(id)s = result._node
+            """ % args
 
         msgQuery = """WITH
-result AS ( %(result_query)s ),
-with_geom AS ( %(with_geom_query)s )
-SELECT with_geom.*
-FROM with_geom 
-ORDER BY seq
-""" % args
-#SELECT seq, _node, _edge, _cost, x, y, path_geom
+            result AS ( %(result_query)s ),
+            with_geom AS ( %(with_geom_query)s )
+            SELECT with_geom.*
+            FROM with_geom 
+            ORDER BY seq
+            """ % args
         return msgQuery
-
 
     def getExportMergeQuery(self, args):
         args['result_query'] = self.getQuery(args)
@@ -127,11 +125,6 @@ ORDER BY seq
             """ % args
 
         return query
-
-
-
-
-
 
     def draw(self, rows, con, args, geomType, canvasItemList, mapCanvas):
         resultNodesVertexMarkers = canvasItemList['markers']

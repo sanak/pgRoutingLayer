@@ -43,29 +43,29 @@ class Function(FunctionBase):
     
     def getQuery(self, args):
         return """
-SELECT seq, id1 AS internal, id2 AS node, cost FROM pgr_tsp('
-  %(node_query)s
-  SELECT id, x, y
-    FROM node WHERE node.id IN (%(ids)s)',
-  %(source_id)s, %(target_id)s)
-""" % args
+            SELECT seq, id1 AS internal, id2 AS node, cost FROM pgr_tsp('
+              %(node_query)s
+              SELECT id, x, y
+                FROM node WHERE node.id IN (%(ids)s)',
+              %(source_id)s, %(target_id)s)
+            """ % args
     
     def getExportQuery(self, args):
         args['result_query'] = self.getQuery(args)
 
         query = """
-WITH
-result AS ( %(result_query)s )
-SELECT 
-  CASE
-    WHEN result._node = %(edge_table)s.%(source)s
-      THEN %(edge_table)s.%(geometry)s
-    ELSE ST_Reverse(%(edge_table)s.%(geometry)s)
-  END AS path_geom,
-  result.*, %(edge_table)s.*
-FROM %(edge_table)s JOIN result
-  ON %(edge_table)s.%(id)s = result._edge ORDER BY result.seq
-""" % args
+            WITH
+            result AS ( %(result_query)s )
+            SELECT 
+              CASE
+                WHEN result._node = %(edge_table)s.%(source)s
+                  THEN %(edge_table)s.%(geometry)s
+                ELSE ST_Reverse(%(edge_table)s.%(geometry)s)
+              END AS path_geom,
+              result.*, %(edge_table)s.*
+            FROM %(edge_table)s JOIN result
+              ON %(edge_table)s.%(id)s = result._edge ORDER BY result.seq
+            """ % args
         return query
 
     def draw(self, rows, con, args, geomType, canvasItemList, mapCanvas):

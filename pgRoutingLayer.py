@@ -556,7 +556,7 @@ class PgRoutingLayer:
             args['BBOX'], args['printBBOX'] = self.getBBOX() 
             query = function.getQuery(args)
            
-            QMessageBox.information(self.dock, self.dock.windowTitle(), 'Run Query:' + query)
+            #QMessageBox.information(self.dock, self.dock.windowTitle(), 'Run Query:' + query)
 
             
             cur = con.cursor()
@@ -615,11 +615,7 @@ class PgRoutingLayer:
             con = db.con
             
             version = Utils.getPgrVersion(con)
-            #if not function.isSupportedVersion(version):
-            #    QApplication.restoreOverrideCursor()
-            #    QMessageBox.warning(self.dock, self.dock.windowTitle(),
-            #        'This function is not supported in pgRouting ver' + str(version))
-            #    return
+
             args['version'] = version
             
             query = ""
@@ -718,43 +714,8 @@ class PgRoutingLayer:
                 return
             args['version'] = version
             
-            withgetExportMergequery = [
-                    'astar',
-                    'bdAstar',
-                    'bdDijkstra',
-                    'dijkstra',
-                    'drivingDistance',
-                    'ksp',
-                    'kdijkstra(path)',
-                    'trsp(vertex)'
-                    ]
-            if function.getName() in withgetExportMergequery:
-                args['BBOX'], args['printBBOX'] = self.getBBOX() 
-                msgQuery = function.getExportMergeQuery(args)
-            else:
-                args['result_query'] = function.getQuery(args)
-
-                args['with_geom_query'] = """SELECT ST_UNION(%(edge_table)s.%(geometry)s) AS the_geom
-                    FROM %(edge_table)s JOIN result ON %(edge_table)s.%(id)s = result._edge
-                    """ % args
-
-
-                args['aggregates_query'] = """SELECT
-                    SUM(_cost) AS agg_cost,
-                    array_agg(_node ORDER BY seq) AS _nodes,
-                    array_agg(_edge ORDER BY seq) AS _edges
-                    FROM result
-                    """
-
-                msgQuery = """WITH
-                    result AS ( %(result_query)s ),
-                    with_geom AS ( %(with_geom_query)s ),
-                    aggregates AS ( %(aggregates_query)s )
-                    SELECT row_number() over() as seq,
-                    _nodes, _edges, agg_cost,
-                    ST_LineMerge(the_geom) AS path_geom
-                    FROM aggregates, with_geom 
-                    """ % args
+            args['BBOX'], args['printBBOX'] = self.getBBOX() 
+            msgQuery = function.getExportMergeQuery(args)
 
             query = self.cleanQuery(msgQuery)
             Utils.logMessage('Export merged:\n' + query)
@@ -775,8 +736,6 @@ class PgRoutingLayer:
                     'alphaShape'
                 ]
                 QMessageBox.information(self.dock, self.dock.windowTitle(), 'Invalid Layer:\n - No paths found or\n - Invalid geometries')
-                QMessageBox.information(self.dock, self.dock.windowTitle(),
-                        'Invalid Layer:\n - No paths found or\n - Invalid geometries or\n - Could not convert BIGINT identifiers to INT')
                 QMessageBox.information(self.dock, self.dock.windowTitle(), 'pgRouting Query:' + args['result_query'])
                 QMessageBox.information(self.dock, self.dock.windowTitle(), 'Geometry Query:' + msgQuery)
             
@@ -803,11 +762,11 @@ class PgRoutingLayer:
         layerName = "(" + letter 
 
         if 'directed' in args and args['directed'] == 'true':
-            layerName +=  "D): "
+            layerName +=  "D) "
         else:
-            layerName +=  "U): "
+            layerName +=  "U) "
 
-        layerName += function.getName()
+        layerName += function.getName() + ": "
 
 
         if 'source_id' in args:
@@ -822,7 +781,7 @@ class PgRoutingLayer:
         elif 'distance' in args:
             layerName += " dd = " + args['distance']
         else:
-            layerName += "->"
+            layerName += " to "
             if 'target_id' in args:
                 layerName += args['target_id']
             else:

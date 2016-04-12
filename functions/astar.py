@@ -29,17 +29,6 @@ class Function(FunctionBase):
             'checkBoxDirected', 'checkBoxHasReverseCost'
         ]
     
-    @classmethod
-    def isEdgeBase(self):
-        return False
-    
-    @classmethod
-    def canExport(self):
-        return True
-
-    def isSupportedVersion(self, version):
-        return version >= 2.0 and version < 3.0
-
     
     def prepare(self, canvasItemList):
         resultPathRubberBand = canvasItemList['path']
@@ -47,8 +36,8 @@ class Function(FunctionBase):
     
     def getQuery(self, args):
         return """
-            SELECT seq, id1 AS _node, id2 AS _edge, cost AS _cost FROM pgr_astar('
-                SELECT %(id)s AS id,
+            SELECT seq, id1 AS _node, id2 AS _edge, cost AS _cost FROM pgr_bdAstar('
+                SELECT %(id)s::int4 AS id,
                     %(source)s::int4 AS source,
                     %(target)s::int4 AS target,
                     %(cost)s::float8 AS cost%(reverse_cost)s,
@@ -56,25 +45,26 @@ class Function(FunctionBase):
                     %(y1)s::float8 AS y1,
                     %(x2)s::float8 AS x2,
                     %(y2)s::float8 AS y2
-                    FROM %(edge_table)s',
+                    FROM %(edge_table)s
+                    WHERE %(edge_table)s.%(geometry)s && %(BBOX)s',
                 %(source_id)s, %(target_id)s, %(directed)s, %(has_reverse_cost)s)""" % args
     
     def getExportQuery(self, args):
         args['result_query'] = self.getQuery(args)
 
         query = """
-WITH
-result AS ( %(result_query)s )
-SELECT 
-  CASE
-    WHEN result._node = %(edge_table)s.%(source)s
-      THEN %(edge_table)s.%(geometry)s
-    ELSE ST_Reverse(%(edge_table)s.%(geometry)s)
-  END AS path_geom,
-  result.*, %(edge_table)s.*
-FROM %(edge_table)s JOIN result
-ON %(edge_table)s.%(id)s = result._edge ORDER BY result.seq
-""" % args
+            WITH
+            result AS ( %(result_query)s )
+            SELECT 
+              CASE
+                WHEN result._node = %(edge_table)s.%(source)s
+                  THEN %(edge_table)s.%(geometry)s
+                ELSE ST_Reverse(%(edge_table)s.%(geometry)s)
+              END AS path_geom,
+              result.*, %(edge_table)s.*
+            FROM %(edge_table)s JOIN result
+            ON %(edge_table)s.%(id)s = result._edge ORDER BY result.seq
+            """ % args
         return query
 
     def getExportMergeQuery(self, args):
