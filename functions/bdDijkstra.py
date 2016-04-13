@@ -7,6 +7,7 @@ from .. import pgRoutingLayer_utils as Utils
 from FunctionBase import FunctionBase
 
 class Function(FunctionBase):
+
     
     @classmethod
     def getName(self):
@@ -25,63 +26,33 @@ class Function(FunctionBase):
             'checkBoxDirected', 'checkBoxHasReverseCost'
         ]
     
-    
+
     def prepare(self, canvasItemList):
         resultPathRubberBand = canvasItemList['path']
         resultPathRubberBand.reset(Utils.getRubberBandType(False))
+
     
     def getQuery(self, args):
         return """
-            SELECT seq, id1 AS _node, id2 AS _edge, cost AS _cost FROM pgr_bdDijkstra('
-                SELECT %(id)s::int4 AS id,
-                    %(source)s::int4 AS source,
-                    %(target)s::int4 AS target,
-                    %(cost)s::float8 AS cost%(reverse_cost)s
-                    FROM %(edge_table)s
-                    WHERE %(edge_table)s.%(geometry)s && %(BBOX)s',
-                %(source_id)s, %(target_id)s, %(directed)s, %(has_reverse_cost)s)""" % args
-    
-    def getExportQuery(self, args):
-        args['result_query'] = self.getQuery(args)
+            SELECT seq, 
+              id1 AS _node, id2 AS _edge, cost AS _cost FROM pgr_bdDijkstra('
+              SELECT %(id)s::int4 AS id,
+                %(source)s::int4 AS source,
+                %(target)s::int4 AS target,
+                %(cost)s::float8 AS cost
+                %(reverse_cost)s
+                FROM %(edge_table)s
+                WHERE %(edge_table)s.%(geometry)s && %(BBOX)s',
+                  %(source_id)s, %(target_id)s, %(directed)s, %(has_reverse_cost)s)
+                """ % args
 
-        query = """
-            WITH
-            result AS ( %(result_query)s )
-            SELECT 
-              CASE
-                WHEN result._node = %(edge_table)s.%(source)s
-                  THEN %(edge_table)s.%(geometry)s
-                ELSE ST_Reverse(%(edge_table)s.%(geometry)s)
-              END AS path_geom,
-              result.*, %(edge_table)s.*
-            FROM %(edge_table)s JOIN result
-            ON %(edge_table)s.%(id)s = result._edge ORDER BY result.seq
-            """ % args
-        return query
+    def getExportQuery(self, args):
+        return self.getJoinResultWithEdgeTable(args)
 
     def getExportMergeQuery(self, args):
-        args['result_query'] = self.getQuery(args)
+        return self.getExportOneSourceOneTargetMergeQuery(args)
 
-        args['with_geom_query'] = """SELECT ST_UNION(%(edge_table)s.%(geometry)s) AS the_geom
-            FROM %(edge_table)s JOIN result ON %(edge_table)s.%(id)s = result._edge
-            """ % args
 
-        args['aggregates_query'] = """SELECT
-            SUM(_cost) AS agg_cost,
-            array_agg(_node ORDER BY seq) AS _nodes,
-            array_agg(_edge ORDER BY seq) AS _edges
-            FROM result
-            """
-
-        query = """WITH
-            result AS ( %(result_query)s ),
-            with_geom AS ( %(with_geom_query)s ),
-            aggregates AS ( %(aggregates_query)s )
-            SELECT row_number() over() as seq,
-            _nodes, _edges, agg_cost,
-            ST_LineMerge(the_geom) AS path_geom FROM aggregates, with_geom 
-            """ % args
-        return query
 
     def draw(self, rows, con, args, geomType, canvasItemList, mapCanvas):
         resultPathRubberBand = canvasItemList['path']
@@ -103,7 +74,7 @@ class Function(FunctionBase):
                 row2 = cur2.fetchone()
                 ##Utils.logMessage(str(row2[0]))
                 assert row2, "Invalid result geometry. (node_id:%(result_node_id)d, edge_id:%(result_edge_id)d)" % args
-                
+            
                 geom = QgsGeometry().fromWkt(str(row2[0]))
                 if geom.wkbType() == QGis.WKBMultiLineString:
                     for line in geom.asMultiPolyline():
@@ -112,6 +83,7 @@ class Function(FunctionBase):
                 elif geom.wkbType() == QGis.WKBLineString:
                     for pt in geom.asPolyline():
                         resultPathRubberBand.addPoint(pt)
-    
+
+
     def __init__(self, ui):
         FunctionBase.__init__(self, ui)

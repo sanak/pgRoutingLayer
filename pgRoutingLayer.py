@@ -624,6 +624,7 @@ class PgRoutingLayer:
             args['BBOX'], args['printBBOX'] = self.getBBOX() 
             #get the EXPORT query
             msgQuery = function.getExportQuery(args)
+            QMessageBox.information(self.dock, self.dock.windowTitle(), 'Geometry Query:' + msgQuery)
             
             query = self.cleanQuery(msgQuery)
             Utils.logMessage('Export:\n' + msgQuery)
