@@ -32,13 +32,6 @@ class Function(FunctionBase):
     def isEdgeBase(self):
         return True
     
-    @classmethod
-    def canExport(self):
-        return True
-    
-    def isSupportedVersion(self, version):
-        return version >= 2.0 and version < 3.0
-
     def prepare(self, canvasItemList):
         resultPathRubberBand = canvasItemList['path']
         resultPathRubberBand.reset(Utils.getRubberBandType(False))
@@ -47,30 +40,93 @@ class Function(FunctionBase):
         return """
             SELECT seq, id1 AS _node, id2 AS _edge, cost AS _cost FROM pgr_trsp('
               SELECT %(id)s::int4 AS id,
-                %(source)s::int4 AS source,
-                %(target)s::int4 AS target,
+                %(source)s::int4 AS source, %(target)s::int4 AS target,
                 %(cost)s::float8 AS cost%(reverse_cost)s
-              FROM %(edge_table)s
-              WHERE %(edge_table)s.%(geometry)s && %(BBOX)s',
+              FROM %(edge_table)s WHERE %(edge_table)s.%(geometry)s && %(BBOX)s',
               %(source_id)s, %(source_pos)s, %(target_id)s, %(target_pos)s, %(directed)s, %(has_reverse_cost)s, %(turn_restrict_sql)s)""" % args
     
     def getExportQuery(self, args):
-        args['result_query'] = self.getQuery(args)
+        args['result_query'] = 'result AS (' + self.getQuery(args) + ')'
 
-        query = """
-            WITH
-            result AS ( %(result_query)s )
-            SELECT 
+        args['max_seq_query'] = 'max_seq AS (SELECT max(seq), min(seq) FROM result) '
+
+        args['with_geom'] = """ with_geom AS (
+                SELECT
+                lead(_node) over(), result.*, %(edge_table)s.* 
+                FROM %(edge_table)s JOIN result
+                ON edge_table.id = result._edge ORDER BY result.seq)""" % args
+
+        args['first_row_split'] = self.getRowSplit(args, 'first')
+        args['last_row_split'] = self.getRowSplit(args, 'last')
+
+        args['intermediate_rows'] = """ intermediate_rows AS (SELECT 
               CASE
                 WHEN result._node = %(edge_table)s.%(source)s
                   THEN %(edge_table)s.%(geometry)s
                 ELSE ST_Reverse(%(edge_table)s.%(geometry)s)
               END AS path_geom,
-              result.*, %(edge_table)s.*
+              lead(_node) over(), result.*, %(edge_table)s.*
             FROM %(edge_table)s JOIN result
-              ON %(edge_table)s.%(id)s = result._edge ORDER BY result.seq
+            ON %(edge_table)s.%(id)s = result._edge
+            WHERE seq not in ((select max FROM max_seq), (select min FROM max_seq))
+            ORDER BY result.seq) """ % args
+
+        return """
+            WITH
+            %(result_query)s,
+            %(max_seq_query)s,
+            %(with_geom)s,
+            %(first_row_split)s,
+            %(last_row_split)s,
+            %(intermediate_rows)s,
+            join_query AS ((SELECT * FROM first_row) UNION (SELECT * FROM last_row) UNION (SELECT * FROM intermediate_rows))
+            SELECT * FROM join_query order by seq
             """ % args
-        return query
+
+    def getExportMergeQuery(self, args):
+        args['result_query'] = 'result AS (' + self.getQuery(args) + ')'
+
+        args['max_seq_query'] = 'max_seq AS (SELECT max(seq), min(seq) FROM result) '
+
+        args['with_geom'] = """ with_geom AS (
+                SELECT
+                lead(_node) over(), result.*, %(edge_table)s.* 
+                FROM %(edge_table)s JOIN result
+                ON edge_table.id = result._edge ORDER BY result.seq)""" % args
+
+        args['first_row_split'] = self.getRowSplit(args, 'first')
+        args['last_row_split'] = self.getRowSplit(args, 'last')
+
+        args['intermediate_rows'] = """ intermediate_rows AS (SELECT 
+              CASE
+                WHEN result._node = %(edge_table)s.%(source)s
+                  THEN %(edge_table)s.%(geometry)s
+                ELSE ST_Reverse(%(edge_table)s.%(geometry)s)
+              END AS path_geom,
+              lead(_node) over(), result.*, %(edge_table)s.*
+            FROM %(edge_table)s JOIN result
+            ON %(edge_table)s.%(id)s = result._edge
+            WHERE seq not in ((select max FROM max_seq), (select min FROM max_seq))
+            ORDER BY result.seq) """ % args
+
+        return """
+            WITH
+            %(result_query)s,
+            %(max_seq_query)s,
+            %(with_geom)s,
+            %(first_row_split)s,
+            %(last_row_split)s,
+            %(intermediate_rows)s,
+            join_query AS ((SELECT * FROM first_row) UNION (SELECT * FROM last_row) UNION (SELECT * FROM intermediate_rows)),
+            one_geom_query AS (
+                SELECT ST_LineMerge(ST_Union(path_geom)) AS path_geom,
+                1 AS seq,
+                SUM(_cost) AS agg_cost,
+                array_agg(_node ORDER BY seq) AS _nodes,
+                array_agg(_edge ORDER BY seq) AS _edges
+            FROM join_query)
+            SELECT * FROM one_geom_query order by seq
+            """ % args
 
     def draw(self, rows, con, args, geomType, canvasItemList, mapCanvas):
         resultPathRubberBand = canvasItemList['path']
@@ -129,5 +185,42 @@ class Function(FunctionBase):
             
             i = i + 1
     
+    def getRowSplit(self, args, which):
+        # PRIVATE method
+        # upper case for localy defined string values
+        #lower case come from args
+        local_args = {}
+        local_args['WHICH'] = which
+        local_args['geometry'] = args['geometry']
+        if which == 'first':
+            local_args['WHAT'] = 'lead'
+            local_args['POSITION'] = """%(source_pos)s""" % args
+            local_args['MINMAX'] = 'min'
+            local_args['NODE'] = """%(target)s""" % args
+        else:
+            local_args['WHAT'] = '_node'
+            local_args['POSITION'] = """%(target_pos)s""" % args
+            local_args['MINMAX'] = 'max'
+            local_args['NODE'] = """%(source)s""" % args
+
+        query = """
+            %(WHICH)s_row_split AS (
+              SELECT CASE
+                WHEN %(WHAT)s = %(NODE)s THEN
+                    ST_split( ST_Snap( %(geometry)s, ST_LineInterpolatePoint(%(geometry)s,  %(POSITION)s), 0.00001),
+                        ST_LineInterpolatePoint(%(geometry)s,  %(POSITION)s))
+                ELSE
+                    ST_reverse( ST_split( ST_Snap( %(geometry)s, ST_LineInterpolatePoint(%(geometry)s, %(POSITION)s), 0.00001),
+                            ST_LineInterpolatePoint(%(geometry)s, %(POSITION)s)))    
+                END AS line_geom,
+                st_length(%(geometry)s) AS length,
+                _cost
+              FROM with_geom WHERE seq = (select %(MINMAX)s FROM max_seq) ),
+            %(WHICH)s_row_dump AS (SELECT (st_dump(line_geom)).geom AS path_geom, length, _cost FROM  %(WHICH)s_row_split),
+            %(WHICH)s_row_choose AS (SELECT path_geom FROM  %(WHICH)s_row_dump WHERE abs(_cost -  st_length(path_geom) / length) < 0.00001),
+            %(WHICH)s_row AS (SELECT * FROM  %(WHICH)s_row_choose, with_geom WHERE seq = (select %(MINMAX)s FROM max_seq))
+            """ % local_args
+        return query
+
     def __init__(self, ui):
         FunctionBase.__init__(self, ui)

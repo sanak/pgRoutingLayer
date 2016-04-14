@@ -28,8 +28,7 @@ class Function(FunctionBase):
             'labelTargetId', 'lineEditTargetId', 'buttonSelectTargetId',
             'checkBoxDirected', 'checkBoxHasReverseCost'
         ]
-    
-    
+
     def prepare(self, canvasItemList):
         resultPathRubberBand = canvasItemList['path']
         resultPathRubberBand.reset(Utils.getRubberBandType(False))

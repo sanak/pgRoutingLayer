@@ -553,7 +553,8 @@ class PgRoutingLayer:
             
             function.prepare(self.canvasItemList)
             
-            args['BBOX'], args['printBBOX'] = self.getBBOX() 
+            srid, geomType = Utils.getSridAndGeomType(con, 'edge_table', '%(geometry)s' % args)
+            args['BBOX'], args['printBBOX'] = self.getBBOX(srid) 
             query = function.getQuery(args)
            
             #QMessageBox.information(self.dock, self.dock.windowTitle(), 'Run Query:' + query)
@@ -618,10 +619,10 @@ class PgRoutingLayer:
 
             args['version'] = version
             
-            query = ""
-            srid, geomType = Utils.getSridAndGeomType(con, 'edge_table', '%(geometry)s' % args)
 
-            args['BBOX'], args['printBBOX'] = self.getBBOX() 
+            srid, geomType = Utils.getSridAndGeomType(con, 'edge_table', '%(geometry)s' % args)
+            args['BBOX'], args['printBBOX'] = self.getBBOX(srid) 
+
             #get the EXPORT query
             msgQuery = function.getExportQuery(args)
             QMessageBox.information(self.dock, self.dock.windowTitle(), 'Geometry Query:' + msgQuery)
@@ -665,9 +666,10 @@ class PgRoutingLayer:
         query = query.strip()
         return query
 
-    def getBBOX(self):
+    def getBBOX(self, srid):
         """ Returns the (Ready to use in query BBOX , print BBOX) """
         bbox = {}
+        bbox['srid'] = srid
         bbox['xMin'] = self.iface.mapCanvas().extent().xMinimum()
         bbox['yMin'] = self.iface.mapCanvas().extent().yMinimum()
         bbox['xMax'] = self.iface.mapCanvas().extent().xMaximum()
@@ -677,10 +679,10 @@ class PgRoutingLayer:
         text += "," + str(round(bbox['xMax'],2))
         text += " " + str(round(bbox['yMax'],2)) + ")"
         return """
-            ST_Envelope(ST_MakeLine( array[
-              St_MakePoint(%(xMin)s, %(yMin)s),
-              St_MakePoint(%(xMax)s, %(yMax)s)]
-              ))
+            ST_MakeEnvelope(
+              %(xMin)s, %(yMin)s,
+              %(xMax)s, %(yMax)s, %(srid)s
+              )
         """ % bbox, text
     
                         
@@ -715,11 +717,13 @@ class PgRoutingLayer:
                 return
             args['version'] = version
             
-            args['BBOX'], args['printBBOX'] = self.getBBOX() 
+            srid, geomType = Utils.getSridAndGeomType(con, 'edge_table', '%(geometry)s' % args)
+            args['BBOX'], args['printBBOX'] = self.getBBOX(srid) 
             msgQuery = function.getExportMergeQuery(args)
 
             query = self.cleanQuery(msgQuery)
             Utils.logMessage('Export merged:\n' + query)
+            QMessageBox.information(self.dock, self.dock.windowTitle(), 'Geometry Query:' + msgQuery)
             
             uri = db.getURI()
             uri.setDataSource("", "(" + query + ")", "path_geom", "", "seq")

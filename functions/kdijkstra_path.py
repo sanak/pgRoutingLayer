@@ -26,17 +26,7 @@ class Function(FunctionBase):
             'checkBoxDirected', 'checkBoxHasReverseCost'
         ]
     
-    @classmethod
-    def isEdgeBase(self):
-        return False
     
-    @classmethod
-    def canExport(self):
-        return True
-    
-    def isSupportedVersion(self, version):
-        return version >= 2.0 and version < 3.0
-
     def prepare(self, canvasItemList):
         resultPathsRubberBands = canvasItemList['paths']
         for path in resultPathsRubberBands:
@@ -59,8 +49,48 @@ class Function(FunctionBase):
         return self.getJoinResultWithEdgeTable(args)
 
     def getExportMergeQuery(self, args):
-        return self.getExportOneSourceOneTargetMergeQuery(args)
+        args['result_query'] = self.getQuery(args)
 
+        args['with_geom_query'] = """
+            SELECT 
+              seq, _path,
+              CASE
+                WHEN result._node = %(edge_table)s.%(source)s
+                  THEN %(edge_table)s.%(geometry)s
+                ELSE ST_Reverse(%(edge_table)s.%(geometry)s)
+              END AS path_geom
+            FROM %(edge_table)s JOIN result
+              ON %(edge_table)s.%(id)s = result._edge 
+            """ % args
+
+        args['one_geom_query'] = """
+            SELECT _path, ST_LineMerge(ST_Union(path_geom)) AS path_geom
+            FROM with_geom
+            GROUP BY _path
+            ORDER BY _path
+            """ % args
+
+        args['aggregates_query'] = """SELECT
+            _path,
+            SUM(_cost) AS agg_cost,
+            array_agg(_node ORDER BY seq) AS _nodes,
+            array_agg(_edge ORDER BY seq) AS _edges
+            FROM result
+            GROUP BY _path
+            """
+
+        query = """
+            WITH
+            result AS ( %(result_query)s ),
+            with_geom AS ( %(with_geom_query)s ),
+            one_geom AS ( %(one_geom_query)s ),
+            aggregates AS ( %(aggregates_query)s )
+            SELECT row_number() over() as seq,
+            _path, _nodes, _edges, agg_cost,
+            path_geom FROM aggregates JOIN one_geom
+            USING (_path)
+            """ % args
+        return query
 
     def draw(self, rows, con, args, geomType, canvasItemList, mapCanvas):
         resultPathsRubberBands = canvasItemList['paths']

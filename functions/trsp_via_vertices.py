@@ -25,13 +25,6 @@ class Function(FunctionBase):
             'labelTurnRestrictSql', 'plainTextEditTurnRestrictSql'
         ]
     
-    @classmethod
-    def isEdgeBase(self):
-        return False
-    
-    @classmethod
-    def canExport(self):
-        return True
 
     def isSupportedVersion(self, version):
         return version >= 2.1 and version < 3.0

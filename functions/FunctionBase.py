@@ -1,6 +1,10 @@
 
 class FunctionBase(object):
 
+    # the mayority of the functions have this values
+    exportButton = True
+    exportMergeButton = True
+    exportEdgeBase = False
 
     @classmethod
     def getName(self):
@@ -10,20 +14,17 @@ class FunctionBase(object):
     def getControlNames(self, version):
         return [ '' ]
     
-    #The following contain the mayority of the functionality has:
     @classmethod
     def isEdgeBase(self):
-        return False
+        return self.exportEdgeBase
     
-    # the mayority of the functions can Export
     @classmethod
     def canExport(self):
-        return True
+        return self.exportButton
 
-    # the mayority of the functions can ExportMerged
     @classmethod
     def canExportMerged(self):
-        return True
+        return self.exportMergeButton
 
     @classmethod
     def isSupportedVersion(self, version):

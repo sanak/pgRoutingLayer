@@ -27,20 +27,12 @@ class Function(FunctionBase):
         ]
     
     @classmethod
-    def isEdgeBase(self):
-        return False
-    
-    @classmethod
     def canExport(self):
         return False
     
     @classmethod
     def canExportMerged(self):
         return False
-    
-    def isSupportedVersion(self, version):
-        return version >= 2.0 and version < 3.0
-
     
     def prepare(self, canvasItemList):
         resultNodesTextAnnotations = canvasItemList['annotations']

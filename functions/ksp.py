@@ -49,17 +49,6 @@ class Function(FunctionBase):
                 'checkBoxHeapPaths'
                 ]
 
-    @classmethod
-    def isEdgeBase(self):
-        return False
-
-    @classmethod
-    def canExport(self):
-        return True
-
-    def isSupportedVersion(self, version):
-        return version >= 2.0 and version < 3.0
-
     def prepare(self, canvasItemList):
         resultPathsRubberBands = canvasItemList['paths']
         for path in resultPathsRubberBands:
@@ -85,7 +74,7 @@ class Function(FunctionBase):
         else:
             return """
                 SELECT seq,
-                  '(' || %(source_id)s || ', ' ||  %(target_id)s || ')-' || path_id AS _path_name,
+                  '(' || %(source_id)s || ', ' ||  %(target_id)s || ')-' || path_id AS path_name,
                   path_id AS _path_id,
                   path_seq AS _path_seq,
                   node AS _node,
@@ -103,31 +92,31 @@ class Function(FunctionBase):
                   %(directed)s, %(heap_paths)s)""" % args
 
     def getExportQuery(self, args):
-        args['result_query'] = self.getQuery(args)
-
-        query = """
-                WITH
-                result AS ( %(result_query)s )
-                SELECT 
-                  CASE
-                    WHEN result._node = %(edge_table)s.%(source)s
-                      THEN %(edge_table)s.%(geometry)s
-                    ELSE ST_Reverse(%(edge_table)s.%(geometry)s)
-                  END AS path_geom,
-                  result.*, %(edge_table)s.*
-                FROM %(edge_table)s JOIN result
-                  ON %(edge_table)s.%(id)s = result._edge ORDER BY result.seq
-                """ % args
-        return query
+        return self.getJoinResultWithEdgeTable(args)
 
 
     def getExportMergeQuery(self, args):
         if self.version < 2.1:
+
             args['result_query'] = self.getQuery(args)
 
-            args['with_geom_query'] = """SELECT _route, ST_UNION(%(edge_table)s.%(geometry)s) AS the_geom
-                FROM %(edge_table)s JOIN result ON %(edge_table)s.%(id)s = result._edge
-                GROUP BY result._route
+            args['with_geom_query'] = """
+                SELECT 
+                  seq, _route,
+                  CASE
+                    WHEN result._node = %(edge_table)s.%(source)s
+                      THEN %(edge_table)s.%(geometry)s
+                    ELSE ST_Reverse(%(edge_table)s.%(geometry)s)
+                  END AS path_geom
+                FROM %(edge_table)s JOIN result
+                  ON %(edge_table)s.%(id)s = result._edge 
+                """ % args
+
+            args['one_geom_query'] = """
+                SELECT _route, ST_LineMerge(ST_Union(path_geom)) AS path_geom
+                FROM with_geom
+                GROUP BY _route
+                ORDER BY _route
                 """ % args
 
             args['aggregates_query'] = """SELECT
@@ -136,16 +125,17 @@ class Function(FunctionBase):
                 array_agg(_node ORDER BY seq) AS _nodes,
                 array_agg(_edge ORDER BY seq) AS _edges
                 FROM result
-                GROUP BY result._route
+                GROUP BY _route
                 """
 
             query = """WITH
                 result AS ( %(result_query)s ),
                 with_geom AS ( %(with_geom_query)s ),
+                one_geom AS ( %(one_geom_query)s ),
                 aggregates AS ( %(aggregates_query)s )
                 SELECT row_number() over() as seq,
                 _route, _nodes, _edges, agg_cost,
-                ST_LineMerge(the_geom) AS path_geom FROM aggregates JOIN with_geom
+                path_geom FROM aggregates JOIN one_geom
                 USING (_route)
                 """ % args
 
@@ -153,28 +143,43 @@ class Function(FunctionBase):
 
             args['result_query'] = self.getQuery(args)
 
-            args['with_geom_query'] = """SELECT result._path_id, ST_UNION(%(edge_table)s.%(geometry)s) AS the_geom
-                FROM %(edge_table)s JOIN result ON %(edge_table)s.%(id)s = result._edge
-                GROUP BY result._path_id
+            args['with_geom_query'] = """
+                SELECT 
+                  seq, result.path_name,
+                  CASE
+                    WHEN result._node = %(edge_table)s.%(source)s
+                      THEN %(edge_table)s.%(geometry)s
+                    ELSE ST_Reverse(%(edge_table)s.%(geometry)s)
+                  END AS path_geom
+                FROM %(edge_table)s JOIN result
+                  ON %(edge_table)s.%(id)s = result._edge 
+                """ % args
+
+            args['one_geom_query'] = """
+                SELECT path_name, ST_LineMerge(ST_Union(path_geom)) AS path_geom
+                FROM with_geom
+                GROUP BY path_name
+                ORDER BY path_name
                 """ % args
 
             args['aggregates_query'] = """SELECT
-                _path_name, _path_id,
+                path_name, _path_id,
                 SUM(_cost) AS agg_cost,
                 array_agg(_node ORDER BY _path_seq) AS _nodes,
                 array_agg(_edge ORDER BY _path_seq) AS _edges
                 FROM result
-                GROUP BY _path_name, _path_id
+                GROUP BY path_name, _path_id
                 """
 
             query = """WITH
                 result AS ( %(result_query)s ),
                 with_geom AS ( %(with_geom_query)s ),
+                one_geom AS ( %(one_geom_query)s ),
                 aggregates AS ( %(aggregates_query)s )
                 SELECT row_number() over() as seq,
-                    _path_id, _path_name, _nodes, _edges, agg_cost,
-                    ST_LineMerge(the_geom) AS path_geom FROM aggregates JOIN with_geom 
-                    USING (_path_id)
+                    _path_id, path_name, _nodes, _edges, agg_cost,
+                    path_geom FROM aggregates JOIN one_geom 
+                    USING (path_name)
                     ORDER BY _path_id
                 """ % args
 

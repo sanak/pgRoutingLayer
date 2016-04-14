@@ -38,17 +38,6 @@ class Function(FunctionBase):
             'checkBoxDirected', 'checkBoxHasReverseCost'
         ]
     
-    @classmethod
-    def isEdgeBase(self):
-        return False
-    
-    @classmethod
-    def canExportMerged(self):
-        return True
-
-    def isSupportedVersion(self, version):
-        return version >= 2.0 and version < 3.0
-    
     def prepare(self, canvasItemList):
         resultNodesVertexMarkers = canvasItemList['markers']
         for marker in resultNodesVertexMarkers:
@@ -88,6 +77,7 @@ class Function(FunctionBase):
                 """ % args
 
     def getExportQuery(self, args):
+        # points are returned
         args['result_query'] = self.getQuery(args)
 
         args['with_geom_query'] = """
@@ -108,23 +98,8 @@ class Function(FunctionBase):
         return msgQuery
 
     def getExportMergeQuery(self, args):
-        args['result_query'] = self.getQuery(args)
-
-        query = """
-            WITH
-            result AS ( %(result_query)s )
-            SELECT 
-              CASE
-                WHEN result._node = %(edge_table)s.%(source)s
-                  THEN %(edge_table)s.%(geometry)s
-                ELSE ST_Reverse(%(edge_table)s.%(geometry)s)
-              END AS path_geom,
-              result.*, %(edge_table)s.*
-            FROM %(edge_table)s JOIN result
-            ON %(edge_table)s.%(id)s = result._edge ORDER BY result.seq
-            """ % args
-
-        return query
+        # the set of edges of the spanning tree are returned
+        return self.getJoinResultWithEdgeTable(args)
 
     def draw(self, rows, con, args, geomType, canvasItemList, mapCanvas):
         resultNodesVertexMarkers = canvasItemList['markers']

@@ -25,11 +25,11 @@ class Function(FunctionBase):
         ]
     
     @classmethod
-    def isEdgeBase(self):
-        return False
-    
-    @classmethod
     def canExport(self):
+        return False
+
+    @classmethod
+    def canExportMerged(self):
         return False
 
     def isSupportedVersion(self, version):

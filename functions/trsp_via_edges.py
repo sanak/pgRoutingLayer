@@ -30,10 +30,6 @@ class Function(FunctionBase):
     def isEdgeBase(self):
         return True
     
-    @classmethod
-    def canExport(self):
-        return True
-    
     def isSupportedVersion(self, version):
         return version >= 2.1 and version < 3.0
 

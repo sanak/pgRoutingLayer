@@ -26,9 +26,10 @@ class Function(FunctionBase):
             'checkBoxDirected', 'checkBoxHasReverseCost'
         ]
     
+    @classmethod
     def canExportMerged(self):
         return False
-    
+
     def prepare(self, canvasItemList):
         resultAreaRubberBand = canvasItemList['area']
         resultAreaRubberBand.reset(Utils.getRubberBandType(True))
