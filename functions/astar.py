@@ -46,7 +46,7 @@ class Function(FunctionBase):
                     %(y2)s::float8 AS y2
                     FROM %(edge_table)s
                     WHERE %(edge_table)s.%(geometry)s && %(BBOX)s',
-                %(source_id)s, %(target_id)s, %(directed)s, %(has_reverse_cost)s)""" % args
+                %(source_id)s::int4, %(target_id)s::int4, %(directed)s, %(has_reverse_cost)s)""" % args
     
     def getExportQuery(self, args):
         return self.getJoinResultWithEdgeTable(args)

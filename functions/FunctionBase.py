@@ -97,8 +97,8 @@ class FunctionBase(object):
             aggregates AS ( %(aggregates_query)s )
             SELECT row_number() over() as seq,
             _nodes, _edges, agg_cost, path_geom
-            FROM aggregates, with_geom 
-                """ % args
+            FROM aggregates, one_geom 
+            """ % args
         return query
 
     def __init__(self, ui):

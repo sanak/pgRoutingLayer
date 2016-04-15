@@ -539,27 +539,17 @@ class PgRoutingLayer:
             con = db.con
             
             version = Utils.getPgrVersion(con)
-            if not function.isSupportedVersion(version):
-                QApplication.restoreOverrideCursor()
-                QMessageBox.warning(self.dock, self.dock.windowTitle(),
-                    'This function is not supported in pgRouting ver' + str(version))
-                return
             args['version'] = version
             
-            #srid, geomType = self.getSridAndGeomType(con, args)
             srid, geomType = Utils.getSridAndGeomType(con, args['edge_table'], args['geometry'])
             if (function.getName() == 'tsp(euclid)'):
                 args['node_query'] = Utils.getNodeQuery(args, geomType)
             
             function.prepare(self.canvasItemList)
             
-            srid, geomType = Utils.getSridAndGeomType(con, 'edge_table', '%(geometry)s' % args)
             args['BBOX'], args['printBBOX'] = self.getBBOX(srid) 
             query = function.getQuery(args)
            
-            #QMessageBox.information(self.dock, self.dock.windowTitle(), 'Run Query:' + query)
-
-            
             cur = con.cursor()
             cur.execute(query)
             rows = cur.fetchall()
@@ -625,10 +615,9 @@ class PgRoutingLayer:
 
             #get the EXPORT query
             msgQuery = function.getExportQuery(args)
-            QMessageBox.information(self.dock, self.dock.windowTitle(), 'Geometry Query:' + msgQuery)
+            Utils.logMessage('Export:\n' + msgQuery)
             
             query = self.cleanQuery(msgQuery)
-            Utils.logMessage('Export:\n' + msgQuery)
             
             uri = db.getURI()
             uri.setDataSource("", "(" + query + ")", "path_geom", "", "seq")
@@ -637,9 +626,9 @@ class PgRoutingLayer:
 
             vl = self.iface.addVectorLayer(uri.uri(), layerName, db.getProviderName())
             if not vl:
-                QMessageBox.information(self.dock, self.dock.windowTitle(), 'Invalid Layer:\n - No paths found or\n - Invalid geometries')
-                QMessageBox.information(self.dock, self.dock.windowTitle(), 'pgRouting Query:' + function.getQuery(args))
-                QMessageBox.information(self.dock, self.dock.windowTitle(), 'Geometry Query:' + msgQuery)
+                QMessageBox.information(self.dock, self.dock.windowTitle(), 'Invalid Layer:\n - No paths found or\n - Failed to create vector layer from query')
+                #QMessageBox.information(self.dock, self.dock.windowTitle(), 'pgRouting Query:' + function.getQuery(args))
+                #QMessageBox.information(self.dock, self.dock.windowTitle(), 'Geometry Query:' + msgQuery)
             
         except psycopg2.DatabaseError, e:
             QApplication.restoreOverrideCursor()
@@ -710,20 +699,14 @@ class PgRoutingLayer:
             con = db.con
             
             version = Utils.getPgrVersion(con)
-            if not function.isSupportedVersion(version):
-                QApplication.restoreOverrideCursor()
-                QMessageBox.warning(self.dock, self.dock.windowTitle(),
-                    'This function is not supported in pgRouting ver' + str(version))
-                return
             args['version'] = version
             
             srid, geomType = Utils.getSridAndGeomType(con, 'edge_table', '%(geometry)s' % args)
             args['BBOX'], args['printBBOX'] = self.getBBOX(srid) 
             msgQuery = function.getExportMergeQuery(args)
+            Utils.logMessage('Export merged:\n' + msgQuery)
 
             query = self.cleanQuery(msgQuery)
-            Utils.logMessage('Export merged:\n' + query)
-            QMessageBox.information(self.dock, self.dock.windowTitle(), 'Geometry Query:' + msgQuery)
             
             uri = db.getURI()
             uri.setDataSource("", "(" + query + ")", "path_geom", "", "seq")
@@ -740,9 +723,10 @@ class PgRoutingLayer:
                     'ksp',
                     'alphaShape'
                 ]
-                QMessageBox.information(self.dock, self.dock.windowTitle(), 'Invalid Layer:\n - No paths found or\n - Invalid geometries')
-                QMessageBox.information(self.dock, self.dock.windowTitle(), 'pgRouting Query:' + args['result_query'])
-                QMessageBox.information(self.dock, self.dock.windowTitle(), 'Geometry Query:' + msgQuery)
+                if function.getName() in bigIntFunctions:
+                    QMessageBox.information(self.dock, self.dock.windowTitle(), 'Invalid Layer:\n - No paths found')
+                else:
+                    QMessageBox.information(self.dock, self.dock.windowTitle(), 'Invalid Layer:\n - No paths found or\n - Failed to create vector layer from query')
             
         except psycopg2.DatabaseError, e:
             QApplication.restoreOverrideCursor()
@@ -1216,7 +1200,7 @@ class PgRoutingLayer:
         settings.setValue('/pgRoutingLayer/ids', self.dock.lineEditIds.text())
         settings.setValue('/pgRoutingLayer/pcts', self.dock.lineEditPcts.text())
         settings.setValue('/pgRoutingLayer/source_id', self.dock.lineEditSourceId.text())
-        settings.setValue('/pgRoutingLayer/source_ids', self.dock.lineEditSourceId.text())
+        settings.setValue('/pgRoutingLayer/source_ids', self.dock.lineEditSourceIds.text())
         settings.setValue('/pgRoutingLayer/source_pos', self.dock.lineEditSourcePos.text())
         settings.setValue('/pgRoutingLayer/target_id', self.dock.lineEditTargetId.text())
         settings.setValue('/pgRoutingLayer/target_pos', self.dock.lineEditTargetPos.text())

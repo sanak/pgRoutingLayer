@@ -45,9 +45,9 @@ class Function(FunctionBase):
         return """
             SELECT seq, id1 AS internal, id2 AS node, cost FROM pgr_tsp('
               %(node_query)s
-              SELECT id, x, y
+              SELECT id::int4, x, y
                 FROM node WHERE node.id IN (%(ids)s)',
-              %(source_id)s, %(target_id)s)
+              %(source_id)s::int4, %(target_id)s::int4)
             """ % args
     
     def getExportQuery(self, args):
