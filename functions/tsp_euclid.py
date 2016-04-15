@@ -44,10 +44,12 @@ class Function(FunctionBase):
     def getQuery(self, args):
         return """
             SELECT seq, id1 AS internal, id2 AS node, cost FROM pgr_tsp('
-              %(node_query)s
-              SELECT id::int4, x, y
-                FROM node WHERE node.id IN (%(ids)s)',
-              %(source_id)s::int4, %(target_id)s::int4)
+                SELECT id::int4,
+                    ST_X(the_geom) AS x,
+                    ST_Y(the_geom) AS y,
+                    the_geom
+                FROM  %(edge_table)s_vertices_pgr WHERE id IN (%(ids)s)',
+            %(source_id)s::int4, %(target_id)s::int4)
             """ % args
     
     def getExportQuery(self, args):
@@ -69,6 +71,74 @@ class Function(FunctionBase):
         return query
 
     def draw(self, rows, con, args, geomType, canvasItemList, mapCanvas):
+        resultPathsRubberBands = canvasItemList['path']
+        rubberBand = None
+        rubberBand = QgsRubberBand(mapCanvas, Utils.getRubberBandType(False))
+        rubberBand.setColor(QColor(255, 0, 0, 128))
+        rubberBand.setWidth(4)
+        i = 0
+        for row in rows:
+            if i == 0:
+                prevrow = row
+                firstrow = row
+                i += 1  
+            cur2 = con.cursor()
+            args['result_seq'] = row[0]
+            args['result_source_id'] = prevrow[2]
+            args['result_target_id'] = row[2]
+            args['result_cost'] = row[3]
+            query2 = """
+                    SELECT ST_AsText( ST_MakeLine( 
+                        (SELECT the_geom FROM  %(edge_table)s_vertices_pgr WHERE %(id)s = %(result_source_id)d),
+                        (SELECT the_geom FROM  %(edge_table)s_vertices_pgr WHERE %(id)s = %(result_target_id)d)
+                        ))
+                """ % args
+            ##Utils.logMessage(query2)
+            cur2.execute(query2)
+            row2 = cur2.fetchone()
+            ##Utils.logMessage(str(row2[0]))
+            assert row2, "Invalid result geometry. (path_id:%(result_path_id)d, saource_id:%(result_source_id)d, target_id:%(result_target_id)d)" % args
+
+            geom = QgsGeometry().fromWkt(str(row2[0]))
+            if geom.wkbType() == QGis.WKBMultiLineString:
+                for line in geom.asMultiPolyline():
+                    for pt in line:
+                        rubberBand.addPoint(pt)
+            elif geom.wkbType() == QGis.WKBLineString:
+                for pt in geom.asPolyline():
+                    rubberBand.addPoint(pt)
+            prevrow = row
+            lastrow = row
+        
+        args['result_source_id'] = lastrow[2]
+        args['result_target_id'] = firstrow[2]
+        args['result_cost'] = row[3]
+        query2 = """
+                SELECT ST_AsText( ST_MakeLine( 
+                    (SELECT the_geom FROM  %(edge_table)s_vertices_pgr WHERE %(id)s = %(result_source_id)d),
+                    (SELECT the_geom FROM  %(edge_table)s_vertices_pgr WHERE %(id)s = %(result_target_id)d)
+                    ))
+            """ % args
+        ##Utils.logMessage(query2)
+        cur2.execute(query2)
+        row2 = cur2.fetchone()
+        ##Utils.logMessage(str(row2[0]))
+        assert row2, "Invalid result geometry. (path_id:%(result_path_id)d, saource_id:%(result_source_id)d, target_id:%(result_target_id)d)" % args
+
+        geom = QgsGeometry().fromWkt(str(row2[0]))
+        if geom.wkbType() == QGis.WKBMultiLineString:
+            for line in geom.asMultiPolyline():
+                for pt in line:
+                    rubberBand.addPoint(pt)
+        elif geom.wkbType() == QGis.WKBLineString:
+            for pt in geom.asPolyline():
+                rubberBand.addPoint(pt)
+
+
+
+
+
+        ############ ANOTATIONS
         resultNodesTextAnnotations = canvasItemList['annotations']
         Utils.setStartPoint(geomType, args)
         Utils.setEndPoint(geomType, args)

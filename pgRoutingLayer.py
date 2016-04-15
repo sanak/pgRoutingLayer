@@ -549,6 +549,7 @@ class PgRoutingLayer:
             
             args['BBOX'], args['printBBOX'] = self.getBBOX(srid) 
             query = function.getQuery(args)
+            #QMessageBox.information(self.dock, self.dock.windowTitle(), 'Geometry Query:' + query)
            
             cur = con.cursor()
             cur.execute(query)
