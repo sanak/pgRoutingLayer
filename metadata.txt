@@ -1,17 +1,17 @@
 [general]
 name=pgRoutingLayer
 description=Dockable widget that adds pgRouting layers
-version=2.0.0
+version=2.1.0
 qgisMinimumVersion=1.8
 qgisMaximumVersion=2.99
-author=Anita Graser, Ko Nagase
+author=Anita Graser, Ko Nagase, Vicky Vergara
 email=anitagraser@gmx.at
-changelog=2.0
-    - port to 2.0 API by Ko Nagase
+changelog=2.1
+    - support for pgRouting 2.1 API by Vicky Vergara
 tags=pgRouting,PostGIS,routing,network analysis
 icon=icon.png
 experimental=True
 homepage=http://anitagraser.com/tag/pgrouting-layer/
-tracker=https://github.com/anitagraser/pgRoutingLayer
-repository=https://github.com/anitagraser/pgRoutingLayer
+tracker=https://github.com/pgRouting/pgRoutingLayer
+repository=https://github.com/pgRouting/pgRoutingLayer
 category=Database
