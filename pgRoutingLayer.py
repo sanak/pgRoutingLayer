@@ -177,6 +177,7 @@ class PgRoutingLayer:
         QObject.connect(self.dock.buttonClear, SIGNAL("clicked()"), self.clear)
         
         #populate the combo with connections
+        self.reloadMessage = False
         self.reloadConnections()
         Utils.logMessage("startup version " + str(self.version))
 
@@ -206,6 +207,7 @@ class PgRoutingLayer:
         self.dock.lineEditAlpha.setValidator(QDoubleValidator())
         self.dock.lineEditPaths.setValidator(QIntValidator())
         self.loadSettings()
+        self.reloadMessage = True
         
     def show(self):
         self.iface.addDockWidget(Qt.LeftDockWidgetArea, self.dock)
@@ -218,8 +220,9 @@ class PgRoutingLayer:
         self.iface.removeDockWidget(self.dock)
         
     def reloadConnections(self):
+        oldReloadMessage = self.reloadMessage
+        self.reloadMessage = False
         database = str(self.dock.comboConnections.currentText())
-        Utils.logMessage("Selected database " + str(database))
 
         self.dock.comboConnections.clear()
 
@@ -235,24 +238,19 @@ class PgRoutingLayer:
                 version = Utils.getPgrVersion(con)
                 if (Utils.getPgrVersion(con) != 0):
                     self.dock.comboConnections.addItem(dbname)
-                Utils.logMessage("Added database " + str(dbname))
-                if dbname == database :
-                    db1 = self.actionsDb[database].connect()
-                    db1.con.close()
 
             finally:
                 if db and db.con:
                     db.con.close()
 
         idx = self.dock.comboConnections.findText(database)
-        Utils.logMessage("idx " + str(idx))
         
         if idx >= 0:
             self.dock.comboConnections.setCurrentIndex(idx)
         else:
             self.dock.comboConnections.setCurrentIndex(0)
 
-        Utils.logMessage("verify Selected database " + str(self.dock.comboConnections.currentText()))
+        self.reloadMessage = oldReloadMessage
         self.updateConnectionEnabled()
 
 
@@ -264,7 +262,8 @@ class PgRoutingLayer:
         db = self.actionsDb[dbname].connect()
         con = db.con
         self.version = Utils.getPgrVersion(con)
-        QMessageBox.information(self.dock, self.dock.windowTitle(), 
+        if self.reloadMessage:
+            QMessageBox.information(self.dock, self.dock.windowTitle(), 
                 'Selected database: ' + dbname + '\npgRouting version: ' + str(self.version))
 
 

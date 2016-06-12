@@ -85,7 +85,7 @@ class Function(FunctionBase):
                ST_X(the_geom) AS x, ST_Y(the_geom) AS y,
                the_geom AS path_geom
             FROM %(edge_table)s_vertices_pgr JOIN result
-            ON %(edge_table)s_vertices_pgr.%(id)s = result._node
+            ON %(edge_table)s_vertices_pgr.id = result._node
             """ % args
 
         msgQuery = """WITH
