@@ -54,7 +54,7 @@ class Function(FunctionBase):
                     SELECT dd.seq AS id,
                     ST_X(the_geom) AS x, ST_Y(the_geom) AS y
                     FROM %(edge_table)s_vertices_pgr JOIN dd
-                    ON edge_table_vertices_pgr.id = dd._node
+                    ON %(edge_table)s_vertices_pgr.id = dd._node
                 )
                 SELECT * FROM node$$::text)
                 """ % args
@@ -80,7 +80,7 @@ class Function(FunctionBase):
                     SELECT dd.seq AS id,
                     ST_X(the_geom) AS x, ST_Y(the_geom) AS y
                     FROM %(edge_table)s_vertices_pgr JOIN dd
-                    ON edge_table_vertices_pgr.id = dd._node
+                    ON %(edge_table)s_vertices_pgr.id = dd._node
                 )
                 SELECT * FROM node$$::text%(alpha)s)
                 """ % args
@@ -107,7 +107,7 @@ class Function(FunctionBase):
                     SELECT dd.seq::int4 AS id,
                     ST_X(the_geom) AS x, ST_Y(the_geom) AS y
                     FROM %(edge_table)s_vertices_pgr JOIN dd
-                    ON edge_table_vertices_pgr.id = dd._node
+                    ON %(edge_table)s_vertices_pgr.id = dd._node
                 )
                 SELECT * FROM node$$::text)
                 """ % args
@@ -130,7 +130,7 @@ class Function(FunctionBase):
                     SELECT dd.seq::int4 AS id,
                     ST_X(the_geom) AS x, ST_Y(the_geom) AS y
                     FROM %(edge_table)s_vertices_pgr JOIN dd
-                    ON edge_table_vertices_pgr.id = dd._node
+                    ON %(edge_table)s_vertices_pgr.id = dd._node
                 )
                 SELECT * FROM node$$::text)
                 """ % args
