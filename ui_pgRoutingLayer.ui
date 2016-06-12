@@ -157,7 +157,7 @@
          <item row="0" column="1">
           <widget class="QLineEdit" name="lineEditTable">
            <property name="toolTip">
-            <string>name of the table containing the routable network</string>
+            <string>Name of the table containing the routable network</string>
            </property>
            <property name="locale">
             <locale language="English" country="UnitedStates"/>
@@ -177,7 +177,7 @@
          <item row="1" column="1">
           <widget class="QLineEdit" name="lineEditGeometry">
            <property name="toolTip">
-            <string>name of the geometry column in network table</string>
+            <string>Name of the geometry column in network table</string>
            </property>
           </widget>
          </item>
@@ -279,7 +279,7 @@
              <item row="1" column="1">
               <widget class="QLineEdit" name="lineEditSource">
                <property name="toolTip">
-                <string>name of the source node column</string>
+                <string>Name of the source column</string>
                </property>
                <property name="locale">
                 <locale language="English" country="UnitedStates"/>
@@ -309,7 +309,7 @@
              <item row="2" column="1">
               <widget class="QLineEdit" name="lineEditTarget">
                <property name="toolTip">
-                <string>name of the target node column</string>
+                <string>Name of the target column</string>
                </property>
                <property name="locale">
                 <locale language="English" country="UnitedStates"/>
@@ -326,7 +326,7 @@
              <item row="3" column="1">
               <widget class="QLineEdit" name="lineEditCost">
                <property name="toolTip">
-                <string>edge traversal cost (a negative cost will prevent the edge from being inserted in the graph)</string>
+                <string>Name of the edge cost column</string>
                </property>
                <property name="locale">
                 <locale language="English" country="UnitedStates"/>
@@ -343,7 +343,7 @@
              <item row="4" column="1">
               <widget class="QLineEdit" name="lineEditReverseCost">
                <property name="toolTip">
-                <string>(optional) the cost for the reverse traversal of the edge. This is only used if &quot;directed graph&quot; and &quot;has reverse cost&quot; are ticked.</string>
+                <string>Name of the reverse_cost column. Used only when ticked.</string>
                </property>
               </widget>
              </item>
@@ -402,7 +402,7 @@
                 </size>
                </property>
                <property name="toolTip">
-                <string>if ticked, reverse cost will be used for the cost of the traversal of the edge in the opposite direction</string>
+                <string>When ticked, reverse_cost will be used.</string>
                </property>
                <property name="locale">
                 <locale language="English" country="UnitedStates"/>
@@ -761,6 +761,9 @@ _sql</string>
                </property>
                <item>
                 <widget class="QCheckBox" name="checkBoxDirected">
+                 <property name="text">
+                  <string>directed</string>
+                 </property>
                  <property name="maximumSize">
                   <size>
                    <width>16777215</width>
@@ -768,20 +771,17 @@ _sql</string>
                   </size>
                  </property>
                  <property name="toolTip">
-                  <string>tick if the graph is directed</string>
+                  <string>Tick if the graph is directed</string>
                  </property>
                  <property name="locale">
                   <locale language="English" country="UnitedStates"/>
-                 </property>
-                 <property name="text">
-                  <string>directed</string>
                  </property>
                 </widget>
                </item>
                <item>
                 <widget class="QCheckBox" name="checkBoxHeapPaths">
                  <property name="toolTip">
-                  <string>tick for algorithm heap paths</string>
+                  <string>Tick for algorithm heap paths</string>
                  </property>
                  <property name="text">
                   <string>heap_paths</string>

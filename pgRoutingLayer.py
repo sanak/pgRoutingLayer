@@ -53,6 +53,7 @@ class PgRoutingLayer:
         'trsp_via_vertices',
         'trsp_via_edges'
     ]
+
     TOGGLE_CONTROL_NAMES = [
         'labelId', 'lineEditId',
         'labelSource', 'lineEditSource',
@@ -150,20 +151,26 @@ class PgRoutingLayer:
         QObject.connect(self.dock.buttonReloadConnections, SIGNAL("clicked()"), self.reloadConnections)
         QObject.connect(self.dock.comboConnections, SIGNAL("currentIndexChanged(const QString&)"), self.updateConnectionEnabled)
         QObject.connect(self.dock.comboBoxFunction, SIGNAL("currentIndexChanged(const QString&)"), self.updateFunctionEnabled)
+
         QObject.connect(self.dock.buttonSelectIds, SIGNAL("clicked(bool)"), self.selectIds)
         QObject.connect(self.idsEmitPoint, SIGNAL("canvasClicked(const QgsPoint&, Qt::MouseButton)"), self.setIds)
 
+        # One source id can be selected in some functions/version
         QObject.connect(self.dock.buttonSelectSourceId, SIGNAL("clicked(bool)"), self.selectSourceId)
         QObject.connect(self.sourceIdEmitPoint, SIGNAL("canvasClicked(const QgsPoint&, Qt::MouseButton)"), self.setSourceId)
-        QObject.connect(self.dock.buttonSelectSourceIds, SIGNAL("clicked(bool)"), self.selectSourceIds)
-        QObject.connect(self.sourceIdsEmitPoint, SIGNAL("canvasClicked(const QgsPoint&, Qt::MouseButton)"), self.setSourceIds)
 
         QObject.connect(self.dock.buttonSelectTargetId, SIGNAL("clicked(bool)"), self.selectTargetId)
         QObject.connect(self.targetIdEmitPoint, SIGNAL("canvasClicked(const QgsPoint&, Qt::MouseButton)"), self.setTargetId)
+
+        # More than one source id can be selected in some functions/version
+        QObject.connect(self.dock.buttonSelectSourceIds, SIGNAL("clicked(bool)"), self.selectSourceIds)
+        QObject.connect(self.sourceIdsEmitPoint, SIGNAL("canvasClicked(const QgsPoint&, Qt::MouseButton)"), self.setSourceIds)
+
         QObject.connect(self.dock.buttonSelectTargetIds, SIGNAL("clicked(bool)"), self.selectTargetIds)
         QObject.connect(self.targetIdsEmitPoint, SIGNAL("canvasClicked(const QgsPoint&, Qt::MouseButton)"), self.setTargetIds)
 
         QObject.connect(self.dock.checkBoxHasReverseCost, SIGNAL("stateChanged(int)"), self.updateReverseCostEnabled)
+
         QObject.connect(self.dock.buttonRun, SIGNAL("clicked()"), self.run)
         QObject.connect(self.dock.buttonExport, SIGNAL("clicked()"), self.export)
         QObject.connect(self.dock.buttonExportMerged, SIGNAL("clicked()"), self.exportMerged)
@@ -185,16 +192,19 @@ class PgRoutingLayer:
         
         self.dock.lineEditIds.setValidator(QRegExpValidator(QRegExp("[0-9,]+"), self.dock))
         self.dock.lineEditPcts.setValidator(QRegExpValidator(QRegExp("[0-9,.]+"), self.dock))
+
         self.dock.lineEditSourceId.setValidator(QIntValidator())
-        self.dock.lineEditSourcePos.setValidator(QDoubleValidator(0.0, 1.0, 10, self.dock))
-        self.dock.lineEditSourceIds.setValidator(QRegExpValidator(QRegExp("[0-9,]+"), self.dock))
         self.dock.lineEditTargetId.setValidator(QIntValidator())
+
+        self.dock.lineEditSourcePos.setValidator(QDoubleValidator(0.0, 1.0, 10, self.dock))
         self.dock.lineEditTargetPos.setValidator(QDoubleValidator(0.0, 1.0, 10, self.dock))
+
         self.dock.lineEditTargetIds.setValidator(QRegExpValidator(QRegExp("[0-9,]+"), self.dock))
+        self.dock.lineEditSourceIds.setValidator(QRegExpValidator(QRegExp("[0-9,]+"), self.dock))
+
         self.dock.lineEditDistance.setValidator(QDoubleValidator())
         self.dock.lineEditAlpha.setValidator(QDoubleValidator())
         self.dock.lineEditPaths.setValidator(QIntValidator())
-        
         self.loadSettings()
         
     def show(self):
@@ -630,7 +640,7 @@ class PgRoutingLayer:
                   'versions are different')
 
 
-            srid, geomType = Utils.getSridAndGeomType(con, '%(edge_table)%' % args, '%(geometry)s' % args)
+            srid, geomType = Utils.getSridAndGeomType(con, '%(edge_table)s' % args, '%(geometry)s' % args)
             args['BBOX'], args['printBBOX'] = self.getBBOX(srid) 
 
             #get the EXPORT query
@@ -721,7 +731,7 @@ class PgRoutingLayer:
             version = Utils.getPgrVersion(con)
             args['version'] = version
             
-            srid, geomType = Utils.getSridAndGeomType(con, 'edge_table', '%(geometry)s' % args)
+            srid, geomType = Utils.getSridAndGeomType(con, '%(edge_table)s' % args, '%(geometry)s' % args)
             args['BBOX'], args['printBBOX'] = self.getBBOX(srid) 
             msgQuery = function.getExportMergeQuery(args)
             Utils.logMessage('Export merged:\n' + msgQuery)
@@ -1184,12 +1194,16 @@ class PgRoutingLayer:
         
         self.dock.lineEditIds.setText(Utils.getStringValue(settings, '/pgRoutingLayer/ids', ''))
         self.dock.lineEditPcts.setText(Utils.getStringValue(settings, '/pgRoutingLayer/pcts', ''))
+
         self.dock.lineEditSourceId.setText(Utils.getStringValue(settings, '/pgRoutingLayer/source_id', ''))
-        self.dock.lineEditSourcePos.setText(Utils.getStringValue(settings, '/pgRoutingLayer/source_pos', '0.5'))
-        self.dock.lineEditTargetIds.setText(Utils.getStringValue(settings, '/pgRoutingLayer/source_ids', ''))
+        self.dock.lineEditSourceIds.setText(Utils.getStringValue(settings, '/pgRoutingLayer/source_ids', ''))
+
         self.dock.lineEditTargetId.setText(Utils.getStringValue(settings, '/pgRoutingLayer/target_id', ''))
-        self.dock.lineEditTargetPos.setText(Utils.getStringValue(settings, '/pgRoutingLayer/target_pos', '0.5'))
         self.dock.lineEditTargetIds.setText(Utils.getStringValue(settings, '/pgRoutingLayer/target_ids', ''))
+
+        self.dock.lineEditSourcePos.setText(Utils.getStringValue(settings, '/pgRoutingLayer/source_pos', '0.5'))
+        self.dock.lineEditTargetPos.setText(Utils.getStringValue(settings, '/pgRoutingLayer/target_pos', '0.5'))
+
         self.dock.lineEditDistance.setText(Utils.getStringValue(settings, '/pgRoutingLayer/distance', ''))
         self.dock.lineEditAlpha.setText(Utils.getStringValue(settings, '/pgRoutingLayer/alpha', '0.0'))
         self.dock.lineEditPaths.setText(Utils.getStringValue(settings, '/pgRoutingLayer/paths', '2'))
@@ -1205,26 +1219,32 @@ class PgRoutingLayer:
         
         settings.setValue('/pgRoutingLayer/sql/edge_table', self.dock.lineEditTable.text())
         settings.setValue('/pgRoutingLayer/sql/geometry', self.dock.lineEditGeometry.text())
+
         settings.setValue('/pgRoutingLayer/sql/id', self.dock.lineEditId.text())
         settings.setValue('/pgRoutingLayer/sql/source', self.dock.lineEditSource.text())
         settings.setValue('/pgRoutingLayer/sql/target', self.dock.lineEditTarget.text())
         settings.setValue('/pgRoutingLayer/sql/cost', self.dock.lineEditCost.text())
         settings.setValue('/pgRoutingLayer/sql/reverse_cost', self.dock.lineEditReverseCost.text())
+
         settings.setValue('/pgRoutingLayer/sql/x1', self.dock.lineEditX1.text())
         settings.setValue('/pgRoutingLayer/sql/y1', self.dock.lineEditY1.text())
         settings.setValue('/pgRoutingLayer/sql/x2', self.dock.lineEditX2.text())
         settings.setValue('/pgRoutingLayer/sql/y2', self.dock.lineEditY2.text())
+
         settings.setValue('/pgRoutingLayer/sql/rule', self.dock.lineEditRule.text())
         settings.setValue('/pgRoutingLayer/sql/to_cost', self.dock.lineEditToCost.text())
         
         settings.setValue('/pgRoutingLayer/ids', self.dock.lineEditIds.text())
         settings.setValue('/pgRoutingLayer/pcts', self.dock.lineEditPcts.text())
-        settings.setValue('/pgRoutingLayer/source_id', self.dock.lineEditSourceId.text())
-        settings.setValue('/pgRoutingLayer/source_ids', self.dock.lineEditSourceIds.text())
         settings.setValue('/pgRoutingLayer/source_pos', self.dock.lineEditSourcePos.text())
-        settings.setValue('/pgRoutingLayer/target_id', self.dock.lineEditTargetId.text())
         settings.setValue('/pgRoutingLayer/target_pos', self.dock.lineEditTargetPos.text())
+
+        settings.setValue('/pgRoutingLayer/source_id', self.dock.lineEditSourceId.text())
+        settings.setValue('/pgRoutingLayer/target_id', self.dock.lineEditTargetId.text())
+
+        settings.setValue('/pgRoutingLayer/source_ids', self.dock.lineEditSourceIds.text())
         settings.setValue('/pgRoutingLayer/target_ids', self.dock.lineEditTargetIds.text())
+
         settings.setValue('/pgRoutingLayer/distance', self.dock.lineEditDistance.text())
         settings.setValue('/pgRoutingLayer/alpha', self.dock.lineEditAlpha.text())
         settings.setValue('/pgRoutingLayer/paths', self.dock.lineEditPaths.text())
@@ -1232,3 +1252,4 @@ class PgRoutingLayer:
         settings.setValue('/pgRoutingLayer/heap_paths', self.dock.checkBoxHeapPaths.isChecked())
         settings.setValue('/pgRoutingLayer/has_reverse_cost', self.dock.checkBoxHasReverseCost.isChecked())
         settings.setValue('/pgRoutingLayer/turn_restrict_sql', self.dock.plainTextEditTurnRestrictSql.toPlainText())
+
