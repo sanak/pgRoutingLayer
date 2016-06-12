@@ -645,6 +645,7 @@ class PgRoutingLayer:
 
             #get the EXPORT query
             msgQuery = function.getExportQuery(args)
+            #QMessageBox.information(self.dock, self.dock.windowTitle(), 'Geometry Query:\n' + msgQuery)
             Utils.logMessage('Export:\n' + msgQuery)
             
             query = self.cleanQuery(msgQuery)
@@ -733,6 +734,8 @@ class PgRoutingLayer:
             
             srid, geomType = Utils.getSridAndGeomType(con, '%(edge_table)s' % args, '%(geometry)s' % args)
             args['BBOX'], args['printBBOX'] = self.getBBOX(srid) 
+
+            # get the exportMerge query
             msgQuery = function.getExportMergeQuery(args)
             Utils.logMessage('Export merged:\n' + msgQuery)
 
@@ -990,7 +993,8 @@ class PgRoutingLayer:
             
             con = db.con
             #srid, geomType = self.getSridAndGeomType(con, args)
-            srid, geomType = Utils.getSridAndGeomType(con, args['edge_table'], args['geometry'])
+            #srid, geomType = Utils.getSridAndGeomType(con, args['edge_table'], args['geometry'])
+            srid, geomType = Utils.getSridAndGeomType(con, '%(edge_table)s' % args, '%(geometry)s' % args)
             if self.iface.mapCanvas().hasCrsTransformEnabled():
                 layerCrs = QgsCoordinateReferenceSystem()
                 Utils.createFromSrid(layerCrs, srid)
@@ -1110,8 +1114,9 @@ class PgRoutingLayer:
             
             con = db.con
             cur = con.cursor()
-            #srid, geomType = self.getSridAndGeomType(con, args)
-            srid, geomType = Utils.getSridAndGeomType(con, 'edge_table', '%(geometry)s' % args)
+
+            srid, geomType = Utils.getSridAndGeomType(con, '%(edge_table)s' % args, '%(geometry)s' % args)
+
             if self.iface.mapCanvas().hasCrsTransformEnabled():
                 layerCrs = QgsCoordinateReferenceSystem()
                 Utils.createFromSrid(layerCrs, srid)

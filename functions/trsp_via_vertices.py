@@ -66,6 +66,12 @@ class Function(FunctionBase):
             """ % args
         return query
 
+
+
+    def getExportMergeQuery(self, args):
+        return self.getExportOneSourceOneTargetMergeQuery(args)
+
+
     def draw(self, rows, con, args, geomType, canvasItemList, mapCanvas):
         resultPathsRubberBands = canvasItemList['paths']
         rubberBand = None

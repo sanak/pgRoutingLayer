@@ -40,7 +40,7 @@ class FunctionBase(object):
         return ''
 
     def getExportMergeQuery(self, args):
-        return ''
+        return 'NOT AVAILABLE'
     
     def draw(self, rows, con, args, geomType, canvasItemList, mapCanvas):
         pass

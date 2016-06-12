@@ -32,11 +32,11 @@ class Function(FunctionBase):
 
     @classmethod
     def canExport(self):
-        return False
+        return True
 
     @classmethod
     def canExportMerged(self):
-        return False
+        return True
     
     def isSupportedVersion(self, version):
         return version >= 2.1 and version < 3.0
@@ -58,21 +58,108 @@ class Function(FunctionBase):
               ARRAY[%(ids)s]::integer[], ARRAY[%(pcts)s]::float8[],
               %(directed)s, %(has_reverse_cost)s, %(turn_restrict_sql)s)""" % args
     
-    def getExportQuery(self, args):
-        args['result_query'] = self.getQuery(args)
+    def getQueries(self, args):
+        args['edge_data_q'] = """
+        edge_data AS (
+            SELECT
+                unnest(ARRAY[%(ids)s::integer]) AS eid,
+                unnest(ARRAY[%(pcts)s::float8]) AS fraction
+        ),
+        geom_data AS (
+            SELECT row_number() over() AS seq,
+                %(id)s, %(source)s, %(target)s, fraction,
+                ST_LineSubstring(%(geometry)s, fraction, 1) as totarget,
+                ST_Reverse(ST_LineSubstring(%(geometry)s, 0, fraction)) as tosource
+            FROM %(edge_table)s JOIN edge_data ON (%(edge_table)s.%(id)s = edge_data.eid)
+        )
+        """ % args 
 
+        args['result_q'] = """
+        result AS (
+            SELECT seq, id1 AS _path, id2 AS _node, id3 AS _edge, cost as _cost
+            FROM pgr_trspViaEdges(
+                'SELECT gid::int4 AS id, source::int4 AS source, target::int4 AS target, cost_s::float8 AS cost, reverse_cost_s::float8 AS reverse_cost
+                    FROM %(edge_table)s WHERE  %(edge_table)s.%(geometry)s && %(BBOX)s',
+                (select array_agg(eid::integer) from edge_data),
+                (select array_agg(fraction::float) from edge_data),
+                %(directed)s, %(has_reverse_cost)s, %(turn_restrict_sql)s)
+        )
+        """ % args
+
+        args['the_rest_q'] = """
+        result1 AS (
+            SELECT seq, _path, lead(_path) over (ORDER BY seq) AS nextpath,
+            _node, lead(_node)  over(ORDER BY seq) AS nextnode, _edge, _cost FROM result
+        ),
+        result_geom AS (
+            SELECT CASE
+                 WHEN result1.nextnode = %(target)s
+                    THEN %(geometry)s
+                    ELSE ST_Reverse(%(geometry)s)
+            END AS path_geom,
+            result1.*
+            FROM  %(edge_table)s JOIN result1 ON  %(id)s  = result1._edge ORDER BY result1.seq
+        ),
+        first_node AS (
+            SELECT result1.seq, _node, nextnode, _edge, _cost,
+            CASE WHEN result1.nextnode = geom_data.target THEN geom_data.totarget ELSE geom_data.tosource END AS path_geom
+            FROM geom_data JOIN result1 ON geom_data.gid = result1._edge WHERE _node = -1
+        ),
+        uturn_node AS (
+            SELECT result1.seq, _node, nextnode, _edge, _cost,
+            CASE WHEN result1._node = geom_data.source THEN ST_MakeLine(ARRAY[ST_reverse(tosource), tosource]) ELSE ST_MakeLine(ARRAY[ST_reverse(totarget), totarget]) END AS path_geom
+            FROM geom_data JOIN result1 ON (gid = _edge) WHERE _node = nextnode
+        ),
+        last_node AS (
+            SELECT result1.seq, _node, nextnode, _edge, _cost,
+            CASE
+                 WHEN result1.nextnode = geom_data.target
+                    THEN ST_Reverse(geom_data.totarget)
+                    ELSE ST_reverse(geom_data.tosource)
+            END AS path_geom
+            FROM geom_data JOIN result1 ON geom_data.gid = result1._edge WHERE result1.seq = (select max(seq) from result1)
+        ),
+        normal_edge AS (
+            SELECT *
+            FROM result_geom
+            WHERE _path = nextpath AND _node != -1 AND _node != nextnode AND seq != (select max(seq) from result)
+        ),
+        all_edges AS (
+            SELECT seq, _node, _edge, _cost, path_geom FROM first_node
+            UNION SELECT seq, _node, _edge, _cost, path_geom FROM last_node
+            UNION SELECT seq, _node, _edge, _cost, path_geom FROM uturn_node
+            UNION SELECT seq, _node, _edge, _cost, path_geom FROM normal_edge
+        )
+        """ % args
+
+
+    def getExportQuery(self, args):
+        self.getQueries(args)
+    
         query = """
             WITH
-            result AS ( %(result_query)s )
+            %(edge_data_q)s,
+            %(result_q)s,
+            %(the_rest_q)s
             SELECT 
-              CASE
-                WHEN result._node = %(edge_table)s.%(source)s
-                  THEN %(edge_table)s.%(geometry)s
-                ELSE ST_Reverse(%(edge_table)s.%(geometry)s)
-              END AS path_geom,
-              result.*, %(edge_table)s.*
-            FROM %(edge_table)s JOIN result
-              ON %(edge_table)s.%(id)s = result._edge ORDER BY result.seq
+              all_edges.*, %(edge_table)s.*
+            FROM %(edge_table)s JOIN all_edges
+              ON %(edge_table)s.%(id)s = all_edges._edge ORDER BY all_edges.seq
+            """ % args
+        return query
+
+    def getExportMergeQuery(self, args):
+        self.getQueries(args)
+    
+        query = """
+            WITH
+            %(edge_data_q)s,
+            %(result_q)s,
+            %(the_rest_q)s
+            SELECT 1 as seq,
+                array_agg(_node) as _nodes,
+                array_agg(_edge) as _edges,
+                ST_makeLine(path_geom) AS path_geom from all_edges
             """ % args
         return query
     
