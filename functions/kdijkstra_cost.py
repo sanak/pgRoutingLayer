@@ -91,8 +91,8 @@ class Function(FunctionBase):
             if args['result_cost'] != -1:
                 query2 = """
                     SELECT ST_AsText( ST_MakeLine( 
-                        (SELECT the_geom FROM  %(edge_table)s_vertices_pgr WHERE %(id)s = %(result_source_id)d),
-                        (SELECT the_geom FROM  %(edge_table)s_vertices_pgr WHERE %(id)s = %(result_target_id)d)
+                        (SELECT the_geom FROM  %(edge_table)s_vertices_pgr WHERE id = %(result_source_id)d),
+                        (SELECT the_geom FROM  %(edge_table)s_vertices_pgr WHERE id = %(result_target_id)d)
                         ))
                     """ % args
                 ##Utils.logMessage(query2)

@@ -294,6 +294,7 @@ class PgRoutingLayer:
     def updateFunctionEnabled(self, text):
         if text == '':
             return
+        self.clear()
         function = self.functions[str(text)]
         
         self.toggleSelectButton(None)
