@@ -208,7 +208,9 @@ class PgRoutingLayer:
         self.iface.removeDockWidget(self.dock)
         
     def reloadConnections(self):
-        currentText = str(self.dock.comboConnections.currentText())
+        database = str(self.dock.comboConnections.currentText())
+        Utils.logMessage("Selected database " + str(database))
+
         self.dock.comboConnections.clear()
 
         actions = conn.getAvailableConnections()
@@ -223,29 +225,43 @@ class PgRoutingLayer:
                 version = Utils.getPgrVersion(con)
                 if (Utils.getPgrVersion(con) != 0):
                     self.dock.comboConnections.addItem(dbname)
+                Utils.logMessage("Added database " + str(dbname))
+                if dbname == database :
+                    db1 = self.actionsDb[database].connect()
+                    db1.con.close()
+
             finally:
                 if db and db.con:
                     db.con.close()
 
-        idx = self.dock.comboConnections.findText(currentText)
+        idx = self.dock.comboConnections.findText(database)
+        Utils.logMessage("idx " + str(idx))
+        
         if idx >= 0:
             self.dock.comboConnections.setCurrentIndex(idx)
         else:
             self.dock.comboConnections.setCurrentIndex(0)
-        self.updateConnectionEnabled()
 
+        Utils.logMessage("verify Selected database " + str(self.dock.comboConnections.currentText()))
+        self.updateConnectionEnabled()
 
 
     def updateConnectionEnabled(self):
         dbname = str(self.dock.comboConnections.currentText())
+        if dbname =='':
+            return
+
         db = self.actionsDb[dbname].connect()
         con = db.con
-        Utils.logMessage("dbname " + dbname)
         self.version = Utils.getPgrVersion(con)
-        Utils.logMessage("update connection version " + str(self.version))
+        QMessageBox.information(self.dock, self.dock.windowTitle(), 
+                'Selected database: ' + dbname + '\npgRouting version: ' + str(self.version))
+
+
         currentFunction = self.dock.comboBoxFunction.currentText()
         if currentFunction =='':
             return
+
         self.loadFunctionsForVersion()
         self.updateFunctionEnabled(currentFunction)
 
@@ -609,9 +625,12 @@ class PgRoutingLayer:
             version = Utils.getPgrVersion(con)
 
             args['version'] = version
-            
+            if (self.version!=version) :
+                QMessageBox.warning(self.dock, self.dock.windowTitle(),
+                  'versions are different')
 
-            srid, geomType = Utils.getSridAndGeomType(con, 'edge_table', '%(geometry)s' % args)
+
+            srid, geomType = Utils.getSridAndGeomType(con, '%(edge_table)%' % args, '%(geometry)s' % args)
             args['BBOX'], args['printBBOX'] = self.getBBOX(srid) 
 
             #get the EXPORT query
