@@ -7,13 +7,11 @@ qgisMaximumVersion=2.99
 author=Anita Graser, Ko Nagase, Vicky Vergara
 email=project@pgrouting.org
 changelog=2.1
-    - port to pgrouting 2.1 API by Vicky Vergara
-changelog=2.0
-    - port to 2.0 API by Ko Nagase
+    - port to pgrouting 2.1
 tags=pgRouting,PostGIS,routing,network analysis
 icon=icon.png
 experimental=True
 homepage=https://github.com/pgRouting/pgRoutingLayer/wiki
-tracker==https://github.com/pgRouting/pgRoutingLayer
+tracker=https://github.com/pgRouting/pgRoutingLayer
 repository=https://github.com/pgRouting/pgRoutingLayer
 category=Database
