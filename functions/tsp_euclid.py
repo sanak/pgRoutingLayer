@@ -72,10 +72,6 @@ class Function(FunctionBase):
 
     def draw(self, rows, con, args, geomType, canvasItemList, mapCanvas):
         resultPathsRubberBands = canvasItemList['path']
-        rubberBand = None
-        rubberBand = QgsRubberBand(mapCanvas, Utils.getRubberBandType(False))
-        rubberBand.setColor(QColor(255, 0, 0, 128))
-        rubberBand.setWidth(4)
         i = 0
         for row in rows:
             if i == 0:
@@ -103,10 +99,10 @@ class Function(FunctionBase):
             if geom.wkbType() == QGis.WKBMultiLineString:
                 for line in geom.asMultiPolyline():
                     for pt in line:
-                        rubberBand.addPoint(pt)
+                        resultPathsRubberBands.addPoint(pt)
             elif geom.wkbType() == QGis.WKBLineString:
                 for pt in geom.asPolyline():
-                    rubberBand.addPoint(pt)
+                    resultPathsRubberBands.addPoint(pt)
             prevrow = row
             lastrow = row
         
@@ -129,10 +125,10 @@ class Function(FunctionBase):
         if geom.wkbType() == QGis.WKBMultiLineString:
             for line in geom.asMultiPolyline():
                 for pt in line:
-                    rubberBand.addPoint(pt)
+                    resultPathsRubberBands.addPoint(pt)
         elif geom.wkbType() == QGis.WKBLineString:
             for pt in geom.asPolyline():
-                rubberBand.addPoint(pt)
+                resultPathsRubberBands.addPoint(pt)
 
 
 
