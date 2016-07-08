@@ -239,6 +239,9 @@ class PgRoutingLayer:
                 if (Utils.getPgrVersion(con) != 0):
                     self.dock.comboConnections.addItem(dbname)
 
+            except dbConnection.DbError, e:
+                Utils.logMessage("dbname:" + dbname + ", " + e.msg)
+
             finally:
                 if db and db.con:
                     db.con.close()
