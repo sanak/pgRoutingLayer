@@ -35,7 +35,7 @@ class Function(FunctionBase):
     
     def getQuery(self, args):
         return """
-            SELECT seq, id1 AS _node, id2 AS _edge, cost AS _cost FROM pgr_astar('
+            SELECT seq, id1 AS _node, id2 AS _edge, cost AS _cost FROM pgr_bdastar('
                 SELECT %(id)s::int4 AS id,
                     %(source)s::int4 AS source,
                     %(target)s::int4 AS target,

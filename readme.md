@@ -1,8 +1,8 @@
 # Welcome to PgRouting Layer!
 
-A plugin for QGIS by Anita Graser and Ko Nagase
+A plugin for QGIS by Anita Graser, Ko Nagase and Vicky Vergara
 
-* project home and bug tracker: https://github.com/anitagraser/pgRoutingLayer
+* project home and bug tracker: https://github.com/pgrouting/pgRoutingLayer
 * plugin repository: http://plugins.qgis.org/plugins
 
 
@@ -43,6 +43,6 @@ This plugin can be installed using the QGIS Plugin Manager. You will have to ena
 
 ### Dependencies
 
-You'll need pgRouting up and running to use this plugin.
+pgRouting v2.x up and running to use this plugin.
 
 Additionally, QGIS needs python-psycopg2 installed to be able to connect to the database.
