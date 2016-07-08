@@ -232,6 +232,7 @@ class PgRoutingLayer:
             self.actionsDb[ unicode(a.text()) ] = a
 
         for dbname in self.actionsDb:
+            db = None
             try:
                 db = self.actionsDb[dbname].connect()
                 con = db.con
@@ -561,6 +562,7 @@ class PgRoutingLayer:
                 'Following argument is not specified.\n' + ','.join(empties))
             return
         
+        db = None
         try:
             dbname = str(self.dock.comboConnections.currentText())
             db = self.actionsDb[dbname].connect()
@@ -629,6 +631,7 @@ class PgRoutingLayer:
                 'Following argument is not specified.\n' + ','.join(empties))
             return
         
+        db = None
         try:
             dbname = str(self.dock.comboConnections.currentText())
             db = self.actionsDb[dbname].connect()
@@ -726,6 +729,7 @@ class PgRoutingLayer:
                 'Following argument is not specified.\n' + ','.join(empties))
             return
         
+        db = None
         try:
             dbname = str(self.dock.comboConnections.currentText())
             db = self.actionsDb[dbname].connect()
@@ -1111,6 +1115,7 @@ class PgRoutingLayer:
         distance = self.iface.mapCanvas().getCoordinateTransform().mapUnitsPerPixel() * self.FIND_RADIUS
         rect = QgsRectangle(pt.x() - distance, pt.y() - distance, pt.x() + distance, pt.y() + distance)
         canvasCrs = Utils.getDestinationCrs(self.iface.mapCanvas())
+        db = None
         try:
             dbname = str(self.dock.comboConnections.currentText())
             db = self.actionsDb[dbname].connect()
