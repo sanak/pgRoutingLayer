@@ -859,7 +859,10 @@ class PgRoutingLayer:
             marker.setVisible(False)
         self.canvasItemList['markers'] = []
         for anno in self.canvasItemList['annotations']:
-            anno.setVisible(False)
+            try:
+                anno.setVisible(False)
+            except Exception, e:
+                Utils.logMessage("anno.setVisible(False) failed, " + e.message, QgsMessageLog.WARNING)
         self.canvasItemList['annotations'] = []
         for path in self.canvasItemList['paths']:
             path.reset(Utils.getRubberBandType(False))
