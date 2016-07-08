@@ -861,7 +861,7 @@ class PgRoutingLayer:
         for anno in self.canvasItemList['annotations']:
             try:
                 anno.setVisible(False)
-            except Exception, e:
+            except RuntimeError, e:
                 Utils.logMessage("anno.setVisible(False) failed, " + e.message, QgsMessageLog.WARNING)
         self.canvasItemList['annotations'] = []
         for path in self.canvasItemList['paths']:
